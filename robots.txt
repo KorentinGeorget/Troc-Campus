@@ -1,0 +1,18 @@
+# robots.txt — Troc'Campus PWA
+User-agent: *
+Allow: /
+
+# Crawlers IA : décisions motivées
+User-agent: GPTBot
+Allow: /            # Les annonces de troc/don gagnent à être trouvées par les assistants IA de recherche
+
+User-agent: ClaudeBot
+Allow: /            # Indexation utile pour orienter les étudiants vers les ressources de seconde main
+
+User-agent: CCBot
+Allow: /            # Exploration web générale autorisée
+
+User-agent: Google-Extended
+Disallow: /         # Pas d'entraînement de modèle sur les données d'annonces étudiantes ; Googlebot indexe la recherche normalement
+
+Sitemap: https://troc-campus.local/sitemap.xml

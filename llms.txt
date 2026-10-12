@@ -1,0 +1,14 @@
+# Troc'Campus
+> Plateforme d'échange, de don et de vente d'objets et manuels entre étudiants sur le campus universitaire de Corse.
+> Projet PWA — M2 Informatique, Università di Corsica.
+
+## Contenu
+- [Annonces publiques en Markdown](https://troc-campus.local/annonces.md): Liste des annonces étudiantes actuellement disponibles (dons de livres, vente de matériel d'étude, troc de mobilier étudiant).
+
+## Technique
+- Stack : Vanilla HTML5, CSS3, JavaScript natif (ES Modules), bibliothèque idb v8.
+- PWA : Web App Manifest standalone, Service Worker (Cache First pour les assets statiques, Network First avec page de secours offline.html pour les navigations), IndexedDB avec store local et file d'attente Outbox pour la synchronisation en arrière-plan (Background Sync).
+- Capacités matérielles :
+  - Caméra : aperçu vidéo direct (getUserMedia), capture instantanée sur Canvas 2D et repli vers sélecteur de fichier avec capture d'appareil. Demande de permission effectuée strictement sur action utilisateur.
+  - Web Share API : partage des annonces via la feuille de partage native du système avec repli presse-papiers automatique.
+  - Web Share Target : réception de photos et textes partagés depuis la galerie du téléphone directement vers l'application.

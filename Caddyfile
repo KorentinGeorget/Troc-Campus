@@ -1,0 +1,19 @@
+:80 {
+    root * /usr/share/caddy
+    file_server
+
+    # En-têtes pour les fichiers Markdown (Jumelle IA)
+    @markdown path *.md
+    header @markdown X-Robots-Tag noindex
+
+    # Cache headers pour les assets PWA
+    @static path *.css *.js *.png *.svg *.ico *.json
+    header @static Cache-Control "public, max-age=86400"
+
+    # Ne pas cacher le Service Worker
+    @sw path /sw.js
+    header @sw Cache-Control "no-cache, no-store, must-revalidate"
+
+    # Routage statique
+    try_files {path} {path}/ /index.html
+}

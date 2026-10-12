@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Troc'Campus — Vendre, donner, échanger entre étudiants</title>
+  <meta name="description" content="Plateforme étudiante installable et utilisable hors ligne pour donner, vendre ou échanger des livres, fournitures et objets sur le campus universitaire.">
+  <meta name="theme-color" content="#10b981">
+
+  <!-- PWA & Mobile Web App -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TrocCampus">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- SEO & Découverte -->
+  <link rel="canonical" href="https://troc-campus.local/">
+  <link rel="alternate" type="text/markdown" href="/annonces.md">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Troc'Campus — Vendre, donner, échanger entre étudiants">
+  <meta property="og:description" content="Plateforme étudiante installable et utilisable hors ligne pour donner, vendre ou échanger sur le campus.">
+  <meta property="og:image" content="https://troc-campus.local/icons/icon-512.png">
+  <meta property="og:url" content="https://troc-campus.local/">
+  <meta property="og:type" content="website">
+
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Troc'Campus",
+        "applicationCategory": "ShoppingApplication",
+        "operatingSystem": "Any",
+        "url": "https://troc-campus.local/",
+        "description": "Plateforme étudiante installable et utilisable hors ligne pour donner, vendre ou échanger sur le campus.",
+        "offers": {
+          "@type": "AggregateOffer",
+          "priceCurrency": "EUR",
+          "lowPrice": "0",
+          "offerCount": "3"
+        }
+      },
+      {
+        "@type": "ItemList",
+        "name": "Annonces publiques Troc'Campus",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Livre Réseaux & Télécoms (Tanenbaum 5e éd.)"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Calculatrice graphique TI-84 Plus CE"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Bureau compact pliable pour chambre CROUS"
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <link rel="stylesheet" href="style.css">
+  <!-- idb : Bibliothèque standard du cours pour IndexedDB avec Promises -->
+  <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
+</head>
+<body>
+
+  <!-- Bannière interactive de mise à jour (Section 5 DOC-TECHNIQUE) -->
+  <aside id="update-banner" role="alert" aria-label="Mise à jour disponible">
+    <div class="banner-content">
+      <span>✨ Une nouvelle version de Troc'Campus est disponible !</span>
+      <button type="button" id="btn-update-apply" class="btn btn-sm btn-primary">Mettre à jour maintenant</button>
+    </div>
+  </aside>
+
+  <!-- En-tête -->
+  <header>
+    <div class="header-container">
+      <div class="logo-group">
+        <img src="icons/icon-192.png" alt="Logo Troc'Campus" class="logo-icon" width="38" height="38">
+        <div>
+          <h1>Troc'Campus</h1>
+        </div>
+      </div>
+      <div class="header-badges">
+        <span id="sync-badge" class="badge" title="État de synchronisation de l'Outbox">⚡ Synchronisé</span>
+        <span id="network" class="badge">en ligne</span>
+        <button type="button" id="btn-install" class="btn-install" title="Installer l'application sur l'appareil">📲 Installer</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h2>L'entraide étudiante sur vos campus</h2>
+      <p>Donnez, troquez ou vendez vos manuels, matériel de cours et équipements de chambre universitaire. Utilisable 100% hors ligne.</p>
+    </section>
+
+    <!-- Formulaire d'ajout d'annonce (Données utilisateur stockées dans IndexedDB) -->
+    <section class="card-form" aria-labelledby="form-heading">
+      <h2 id="form-heading">➕ Déposer une annonce</h2>
+      <form id="form-annonce" autocomplete="off">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="ad-title">Titre de l'annonce *</label>
+            <input type="text" id="ad-title" placeholder="ex. Manuel de Droit Constitutionnel L1" required>
+          </div>
+
+          <div class="form-group">
+            <label for="ad-type">Type d'échange *</label>
+            <select id="ad-type" required>
+              <option value="don">🎁 Don (Gratuit)</option>
+              <option value="vente">💶 Vente</option>
+              <option value="troc">🔄 Troc / Échange</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="group-price">
+            <label for="ad-price">Prix en € (si vente)</label>
+            <input type="number" id="ad-price" min="0" step="1" placeholder="0">
+          </div>
+
+          <div class="form-group">
+            <label for="ad-campus">Lieu de remise *</label>
+            <select id="ad-campus" required>
+              <option value="Campus Mariani, Corte">Campus Mariani, Corte</option>
+              <option value="Campus Grimaldi, Corte">Campus Grimaldi, Corte</option>
+              <option value="IUT de Corse, Corte">IUT de Corse, Corte</option>
+              <option value="Résidence Grossetti, Corte">Résidence Grossetti, Corte</option>
+              <option value="Campus Bastia">Campus Bastia</option>
+              <option value="Campus Ajaccio">Campus Ajaccio</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="ad-contact">Contact (email / téléphone) *</label>
+            <input type="text" id="ad-contact" placeholder="contact@univ-corse.fr" required>
+          </div>
+
+          <div class="form-group full">
+            <label for="ad-desc">Description détaillée *</label>
+            <textarea id="ad-desc" placeholder="État du matériel, conditions d'échange, disponibilités..." required></textarea>
+          </div>
+
+          <!-- Capacité matérielle 1 : Caméra (getUserMedia + snapshot Canvas + fallback) -->
+          <div class="form-group full">
+            <label>Photo de l'objet (Capacité matérielle)</label>
+            <div class="camera-box">
+              <div class="camera-controls">
+                <button type="button" id="btn-camera" class="btn btn-secondary">
+                  📸 Ouvrir la caméra
+                </button>
+                <label for="photo-file" class="btn btn-secondary" style="cursor: pointer;">
+                  📁 Choisir ou capturer un fichier
+                </label>
+                <input type="file" id="photo-file" accept="image/*" capture="environment" style="display: none;">
+              </div>
+
+              <!-- Message d'erreur explicatif si la permission est refusée -->
+              <div id="camera-error" role="alert"></div>
+
+              <!-- Zone de flux vidéo en direct -->
+              <div id="video-wrapper">
+                <video id="camera-video" playsinline autoplay muted></video>
+                <div class="video-overlay-btn">
+                  <button type="button" id="btn-capture" class="btn btn-primary">Prendre la photo</button>
+                  <button type="button" id="btn-camera-close" class="btn btn-secondary btn-sm" style="margin-left: 0.5rem;">Fermer</button>
+                </div>
+              </div>
+
+              <canvas id="camera-canvas" style="display: none;"></canvas>
+
+              <!-- Aperçu de la photo enregistrée -->
+              <div id="photo-preview-box">
+                <img id="photo-preview-img" alt="Aperçu de la photo de l'annonce">
+                <div>
+                  <p style="font-size: 0.85rem; font-weight: 600;">Photo sélectionnée</p>
+                  <button type="button" id="btn-photo-remove" class="btn btn-danger btn-sm" style="margin-top: 0.3rem;">Supprimer la photo</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group full" style="margin-top: 0.5rem;">
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.85rem;">
+              Publier l'annonce
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- Liste des annonces (Contenu public dans le HTML initial pour bots & SEO) -->
+    <section aria-labelledby="annonces-heading">
+      <div class="annonces-header">
+        <h2 id="annonces-heading">Annonces disponibles (<span id="ad-count">3</span>)</h2>
+        <div class="filter-group">
+          <button type="button" class="filter-btn active" data-filter="all">Toutes</button>
+          <button type="button" class="filter-btn" data-filter="don">Dons</button>
+          <button type="button" class="filter-btn" data-filter="vente">Ventes</button>
+          <button type="button" class="filter-btn" data-filter="troc">Trocs</button>
+        </div>
+      </div>
+
+      <ul id="annonces-list" class="annonces-grid">
+        <!-- 3 annonces publiques initiales (data-seed) lisibles par curl sans JavaScript -->
+        <li class="ad-card" data-seed data-id="seed-1" data-type="don" data-price="0" data-campus="Campus Grimaldi, Corte">
+          <article>
+            <div class="ad-image-container">
+              <div class="ad-image-placeholder">📚</div>
+            </div>
+            <div class="ad-body">
+              <div class="ad-meta-top">
+                <span class="type-pill type-don">Don</span>
+                <span class="ad-price">Gratuit</span>
+              </div>
+              <h3 class="ad-title">Livre Réseaux & Télécoms (Tanenbaum 5e éd.)</h3>
+              <p class="ad-desc">Manuel en très bon état avec schémas, idéal pour étudiant en Licence ou Master Informatique. À récupérer au bâtiment pédagogique.</p>
+            </div>
+            <div class="ad-footer">
+              <span class="ad-campus">📍 Campus Grimaldi, Corte</span>
+              <div class="ad-actions">
+                <button type="button" class="btn btn-secondary btn-sm btn-share" data-title="Livre Réseaux & Télécoms" data-text="Livre Tanenbaum en don à Grimaldi" title="Partager l'annonce">Partager</button>
+              </div>
+            </div>
+          </article>
+        </li>
+
+        <li class="ad-card" data-seed data-id="seed-2" data-type="vente" data-price="35" data-campus="Campus Mariani, Corte">
+          <article>
+            <div class="ad-image-container">
+              <div class="ad-image-placeholder">🧮</div>
+            </div>
+            <div class="ad-body">
+              <div class="ad-meta-top">
+                <span class="type-pill type-vente">Vente</span>
+                <span class="ad-price">35 €</span>
+              </div>
+              <h3 class="ad-title">Calculatrice graphique TI-84 Plus CE</h3>
+              <p class="ad-desc">Batterie rechargeable neuve, avec câble USB et coque de protection. Parfait pour les examens et modules de maths/physique.</p>
+            </div>
+            <div class="ad-footer">
+              <span class="ad-campus">📍 Campus Mariani, Corte</span>
+              <div class="ad-actions">
+                <button type="button" class="btn btn-secondary btn-sm btn-share" data-title="Calculatrice TI-84" data-text="TI-84 Plus CE à vendre 35 €" title="Partager l'annonce">Partager</button>
+              </div>
+            </div>
+          </article>
+        </li>
+
+        <li class="ad-card" data-seed data-id="seed-3" data-type="troc" data-price="0" data-campus="Résidence Grossetti, Corte">
+          <article>
+            <div class="ad-image-container">
+              <div class="ad-image-placeholder">🪑</div>
+            </div>
+            <div class="ad-body">
+              <div class="ad-meta-top">
+                <span class="type-pill type-troc">Troc</span>
+                <span class="ad-price">Échange</span>
+              </div>
+              <h3 class="ad-title">Bureau compact pliable pour chambre CROUS</h3>
+              <p class="ad-desc">Échange bureau compact en bois clair contre chaise de bureau ergonomique ou petite étagère de rangement.</p>
+            </div>
+            <div class="ad-footer">
+              <span class="ad-campus">📍 Résidence Grossetti, Corte</span>
+              <div class="ad-actions">
+                <button type="button" class="btn btn-secondary btn-sm btn-share" data-title="Bureau compact pliable" data-text="Bureau en troc à Grossetti" title="Partager l'annonce">Partager</button>
+              </div>
+            </div>
+          </article>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <!-- Journal d'activité interactif (Tracé des événements SW, outbox, caméra et réseau) -->
+  <aside id="journal-box" aria-label="Journal d'activité technique">
+    <div class="journal-container">
+      <div class="journal-head">
+        <strong>📋 Journal d'activité technique PWA</strong>
+        <span>
+          <button type="button" id="btn-update-check" class="btn btn-secondary btn-sm" title="Vérifier la présence d'une nouvelle version">Vérifier MAJ</button>
+          <button type="button" id="btn-journal-clear" class="btn btn-secondary btn-sm" title="Vider le journal">Effacer</button>
+        </span>
+      </div>
+      <ol id="journal"></ol>
+    </div>
+  </aside>
+
+  <!-- Conteneur des alertes éphémères (Toasts) -->
+  <div id="toast-container" aria-live="polite"></div>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>
