@@ -184,7 +184,7 @@ Le fichier `index.html` embarque en dur **trois annonces publiques complètes** 
      - **`PerplexityBot`** (`Allow: /`) : moteur conversationnel citant directement les sources.
      - **`CCBot`** (`Disallow: /`) : jeu d'entraînement Common Crawl (pas d'aspiration de masse).
      - **`Google-Extended`** (`Disallow: /`) : bloque l'entraînement de Gemini sans impacter Google Search.
-   - Déclaration du sitemap : `Sitemap: https://troc-campus.local/sitemap.xml`.
+   - Déclaration du sitemap : `Sitemap: https://troc-campus.korentingeorget.com/sitemap.xml`.
 2. **`sitemap.xml` :** Déclare la page racine et la jumelle Markdown avec balises `<lastmod>` conformes.
 3. **`llms.txt` :** Fichier structuré selon le standard Jeremy Howard (titre H1, résumé synthétique en citation, sections décrivant le contenu et la stack technique).
 4. **`annonces.md` & Négociation Markdown :** Version jumelle Markdown pur du catalogue des annonces publiques. Caddy négocie également le contenu via l'en-tête `Accept: text/markdown` sur `/` pour renvoyer la jumelle avec `Vary: Accept` et `X-Robots-Tag: noindex`.

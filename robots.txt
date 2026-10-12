@@ -24,4 +24,4 @@ Disallow: /         # Jeu d'entraînement Common Crawl : pas d'aspiration de don
 User-agent: Google-Extended
 Disallow: /         # Ni entraînement ni grounding de Gemini ; Googlebot reste ouvert pour la recherche
 
-Sitemap: https://troc-campus.local/sitemap.xml
+Sitemap: https://troc-campus.korentingeorget.com/sitemap.xml

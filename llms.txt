@@ -3,7 +3,7 @@
 > Projet PWA — M2 Informatique, Università di Corsica.
 
 ## Contenu
-- [Annonces publiques en Markdown](https://troc-campus.local/annonces.md): Liste des annonces étudiantes actuellement disponibles (dons de livres, vente de matériel d'étude, troc de mobilier étudiant).
+- [Annonces publiques en Markdown](https://troc-campus.korentingeorget.com/annonces.md): Liste des annonces étudiantes actuellement disponibles (dons de livres, vente de matériel d'étude, troc de mobilier étudiant).
 
 ## Technique
 - Stack : Vanilla HTML5, CSS3, JavaScript natif (ES Modules), bibliothèque idb v8.
