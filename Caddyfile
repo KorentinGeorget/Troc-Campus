@@ -1,6 +1,5 @@
 :80 {
     root * /usr/share/caddy
-    file_server
 
     # Endpoint de synchronisation mock local (réponse immédiate 200 OK avec CORS et If-Match)
     handle /api/sync {
@@ -11,8 +10,22 @@
         respond `{"status":"ok","synced":true}` 200
     }
 
-    # En-têtes pour les fichiers Markdown (Jumelle IA)
+    # Négociation de contenu Markdown (Démo chapitre 8 : Accept: text/markdown)
+    @markdown_accept {
+        header Accept *text/markdown*
+        path / /index.html
+    }
+    handle @markdown_accept {
+        header Content-Type "text/markdown; charset=utf-8"
+        header Vary Accept
+        header X-Robots-Tag noindex
+        rewrite * /annonces.md
+        file_server
+    }
+
+    # En-têtes pour les fichiers Markdown directs (Jumelle IA)
     @markdown path *.md
+    header @markdown Content-Type "text/markdown; charset=utf-8"
     header @markdown X-Robots-Tag noindex
 
     # Cache headers pour les assets statiques immuables (images, favicons)
@@ -23,6 +36,6 @@
     @nocache path /sw.js /app.js /style.css /index.html /manifest.json /offline.html
     header @nocache Cache-Control "no-cache, no-store, must-revalidate"
 
-    # Routage statique
-    try_files {path} {path}/ /index.html
+    # Servir les fichiers statiques (renvoie un vrai 404 si le fichier n'existe pas)
+    file_server
 }

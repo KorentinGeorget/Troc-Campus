@@ -173,16 +173,23 @@ Le fichier `index.html` embarque en dur **trois annonces publiques complètes** 
 - Un robot d'indexation ou la commande `curl -s http://localhost:3000/ | grep -c "<li[ >]"` renvoie immédiatement au moins 3 éléments sans exécuter le moindre script JavaScript.
 - Au premier démarrage du navigateur, la fonction `initHydration()` vérifie si la base IndexedDB est vide (`db.count("annonces") === 0`) et n'importe ces annonces qu'une seule fois, évitant ainsi les doublons (3, 6, 9...).
 
-### Fichiers de découverte
+### Fichiers de découverte & Négociation de contenu
 1. **`robots.txt` :**
    - Autorise l'exploration générale (`User-agent: * Allow: /`).
-   - Décision motivée pour **GPTBot** et **ClaudeBot** (`Allow: /`) : les annonces de troc étudiant gagnent à être indexées et citées par les assistants IA de recherche.
-   - Décision motivée pour **Google-Extended** (`Disallow: /`) : interdit l'entraînement des modèles génératifs sur les coordonnées d'étudiants, tout en laissant Googlebot explorer la recherche traditionnelle.
-   - Pointe explicitement vers le sitemap : `Sitemap: https://troc-campus.local/sitemap.xml`.
+   - Décisions motivées explicites pour les 7 jetons d'IA du Chapitre 8 :
+     - **`GPTBot`** (`Allow: /`) : acquisition et visibilité des annonces citées dans ChatGPT.
+     - **`OAI-SearchBot`** (`Allow: /`) : moteur OpenAI Search temps réel pour trouver les annonces.
+     - **`ClaudeBot`** (`Allow: /`) : indexation pour orienter les étudiants vers le réemploi.
+     - **`Claude-SearchBot`** (`Allow: /`) : recherche directe dans l'assistant Anthropic Claude.
+     - **`PerplexityBot`** (`Allow: /`) : moteur conversationnel citant directement les sources.
+     - **`CCBot`** (`Disallow: /`) : jeu d'entraînement Common Crawl (pas d'aspiration de masse).
+     - **`Google-Extended`** (`Disallow: /`) : bloque l'entraînement de Gemini sans impacter Google Search.
+   - Déclaration du sitemap : `Sitemap: https://troc-campus.local/sitemap.xml`.
 2. **`sitemap.xml` :** Déclare la page racine et la jumelle Markdown avec balises `<lastmod>` conformes.
 3. **`llms.txt` :** Fichier structuré selon le standard Jeremy Howard (titre H1, résumé synthétique en citation, sections décrivant le contenu et la stack technique).
-4. **`annonces.md` :** Version jumelle Markdown pur du catalogue des annonces publiques.
-5. **JSON-LD Schema.org :** Déclare dans le `<head>` une entité `WebApplication` (`applicationCategory: ShoppingApplication`) combinée à une `ItemList` décrivant les annonces disponibles.
+4. **`annonces.md` & Négociation Markdown :** Version jumelle Markdown pur du catalogue des annonces publiques. Caddy négocie également le contenu via l'en-tête `Accept: text/markdown` sur `/` pour renvoyer la jumelle avec `Vary: Accept` et `X-Robots-Tag: noindex`.
+5. **Routage serveur & Vraie réponse 404 :** Caddy sert les fichiers statiques sans réécriture aveugle `/* -> /index.html`, garantissant qu'une URL inexistante répond un véritable code HTTP `404 Not Found` (évite le piège du soft 404).
+6. **JSON-LD Schema.org :** Déclare dans le `<head>` une entité `WebApplication` (`applicationCategory: ShoppingApplication`) combinée à une `ItemList` décrivant les annonces disponibles.
 
 ---
 

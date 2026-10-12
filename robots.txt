@@ -2,17 +2,26 @@
 User-agent: *
 Allow: /
 
-# Crawlers IA : décisions motivées
+# Crawlers IA : décisions motivées pour les 7 jetons du cours (Chapitre 8)
 User-agent: GPTBot
-Allow: /            # Les annonces de troc/don gagnent à être trouvées par les assistants IA de recherche
+Allow: /            # Citée par ChatGPT : acquisition et visibilité des annonces
+
+User-agent: OAI-SearchBot
+Allow: /            # Moteur OpenAI Search : recherche d'annonces étudiantes en temps réel
 
 User-agent: ClaudeBot
-Allow: /            # Indexation utile pour orienter les étudiants vers les ressources de seconde main
+Allow: /            # Orientation vers les dons et ventes de matériel universitaire
+
+User-agent: Claude-SearchBot
+Allow: /            # Moteur de recherche Anthropic Claude : découverte des objets disponibles
+
+User-agent: PerplexityBot
+Allow: /            # Moteur conversationnel : citation directe des annonces de réemploi
 
 User-agent: CCBot
-Allow: /            # Exploration web générale autorisée
+Disallow: /         # Jeu d'entraînement Common Crawl : pas d'aspiration de données en masse
 
 User-agent: Google-Extended
-Disallow: /         # Pas d'entraînement de modèle sur les données d'annonces étudiantes ; Googlebot indexe la recherche normalement
+Disallow: /         # Ni entraînement ni grounding de Gemini ; Googlebot reste ouvert pour la recherche
 
 Sitemap: https://troc-campus.local/sitemap.xml
