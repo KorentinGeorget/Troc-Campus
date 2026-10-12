@@ -768,8 +768,16 @@ let waitingWorker = null;
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").then((reg) => {
+    // Si un worker a été téléchargé et attend déjà l'activation
+    if (reg.waiting && navigator.serviceWorker.controller) {
+      waitingWorker = reg.waiting;
+      const banner = document.querySelector("#update-banner");
+      if (banner) banner.hidden = false;
+    }
+
     reg.addEventListener("updatefound", () => {
       const newWorker = reg.installing;
+      if (!newWorker) return;
       newWorker.addEventListener("statechange", () => {
         if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
           waitingWorker = newWorker;
