@@ -4,7 +4,9 @@ Plateforme d'échange, de don et de vente d'objets, fournitures et manuels entre
 
 Projet conçu dans le cadre du cours de Progressive Web Apps (Master 2 Informatique, Università di Corsica).
 
+- **URL en production :** [https://troc-campus.korentingeorget.com](https://troc-campus.korentingeorget.com)
 - **Document technique complet :** [`DOC-TECHNIQUE.md`](./DOC-TECHNIQUE.md)
+- **Dépôt GitHub :** [https://github.com/KorentinGeorget/Troc-Campus](https://github.com/KorentinGeorget/Troc-Campus)
 
 ---
 
@@ -42,19 +44,19 @@ Accéder ensuite à `http://localhost:3000`.
 
 ---
 
-## 🧪 Commandes de vérification
+## 🧪 Commandes de vérification (Production)
 
 ```bash
-# 1. Vérification du contenu public en HTML brut (doit renvoyer 3 sans exécuter JS)
-curl -s http://localhost:3000/ | grep -c "<li[ >]"
+# 1. Vérification du contenu public en HTML brut (doit renvoyer >= 3 sans exécuter JS)
+curl -s https://troc-campus.korentingeorget.com/ | grep -c "<li[ >]"
 
 # 2. Consultation de la jumelle Markdown pour agents IA
-curl -s http://localhost:3000/annonces.md
+curl -s https://troc-campus.korentingeorget.com/annonces.md
 
 # 3. Vérification des fichiers de découverte (réponses HTTP 200)
-curl -sI http://localhost:3000/robots.txt | head -n 1
-curl -sI http://localhost:3000/sitemap.xml | head -n 1
-curl -sI http://localhost:3000/llms.txt | head -n 1
+curl -sI https://troc-campus.korentingeorget.com/robots.txt | head -n 1
+curl -sI https://troc-campus.korentingeorget.com/sitemap.xml | head -n 1
+curl -sI https://troc-campus.korentingeorget.com/llms.txt | head -n 1
 ```
 
 ---

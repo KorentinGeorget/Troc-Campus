@@ -170,7 +170,7 @@ Dans une application où l'utilisateur rédige des annonces détaillées et capt
 
 ### Contenu initial dans le HTML
 Le fichier `index.html` embarque en dur **trois annonces publiques complètes** identifiées par l'attribut `data-seed`.
-- Un robot d'indexation ou la commande `curl -s http://localhost:3000/ | grep -c "<li[ >]"` renvoie immédiatement au moins 3 éléments sans exécuter le moindre script JavaScript.
+- Un robot d'indexation ou la commande `curl -s https://troc-campus.korentingeorget.com/ | grep -c "<li[ >]"` renvoie immédiatement au moins 3 éléments sans exécuter le moindre script JavaScript.
 - Au premier démarrage du navigateur, la fonction `initHydration()` vérifie si la base IndexedDB est vide (`db.count("annonces") === 0`) et n'importe ces annonces qu'une seule fois, évitant ainsi les doublons (3, 6, 9...).
 
 ### Fichiers de découverte & Négociation de contenu
@@ -207,15 +207,15 @@ Le fichier `index.html` embarque en dur **trois annonces publiques complètes** 
 ### Commandes de vérification curl
 ```bash
 # 1. Vérification de la présence du contenu public en HTML brut (renvoie 3)
-curl -s http://localhost:3000/ | grep -c "<li[ >]"
+curl -s https://troc-campus.korentingeorget.com/ | grep -c "<li[ >]"
 
 # 2. Vérification de la jumelle Markdown
-curl -s http://localhost:3000/annonces.md
+curl -s https://troc-campus.korentingeorget.com/annonces.md
 
 # 3. Réponse HTTP 200 des fichiers de découverte
-curl -sI http://localhost:3000/robots.txt | head -1
-curl -sI http://localhost:3000/sitemap.xml | head -1
-curl -sI http://localhost:3000/llms.txt | head -1
+curl -sI https://troc-campus.korentingeorget.com/robots.txt | head -1
+curl -sI https://troc-campus.korentingeorget.com/sitemap.xml | head -1
+curl -sI https://troc-campus.korentingeorget.com/llms.txt | head -1
 ```
 
 ### Audits DevTools / Lighthouse
