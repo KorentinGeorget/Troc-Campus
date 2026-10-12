@@ -1,6 +1,6 @@
 # Troc'Campus — Technical Design Doc
 
-Korentin Georget · 12 octobre 2026 · Production : VPS Coolify · Dépôt : Public Git · Statut : Final
+Korentin Georget · 12 octobre 2026 · Production : VPS Coolify · Dépôt : https://github.com/KorentinGeorget/Troc-Campus · Statut : Final
 
 ---
 
@@ -228,5 +228,5 @@ curl -sI http://localhost:3000/llms.txt | head -1
   - L'API `Background Sync` est exclusive aux navigateurs dérivés de Chromium (Chrome, Edge) ; sous iOS Safari et Firefox, la synchronisation s'appuie sur le repli robuste de l'événement `online`.
   - La réception de fichiers par Web Share Target nécessite l'installation préalable de l'application sur le système d'exploitation hôte (Android).
 - **Pistes pour la v2 :**
-  - Intégration de la réconciliation optimiste de conflits avec en-têtes `If-Match` et statut HTTP 412 pour les annonces multi-utilisateurs modifiables.
-  - Connexion des notifications Push FCM via le projet Firebase de la promotion lors du portage natif Android (Partie II du cours).
+  - Généralisation de la gestion des conflits à un backend centralisé multi-utilisateurs en temps réel (la v1 implémentant déjà la négociation `If-Match: "<version>"` avec arbitrage visuel 412).
+  - Connexion des notifications Push distantes via Firebase Cloud Messaging (FCM) lors du portage natif Android (Partie II du cours en novembre).
