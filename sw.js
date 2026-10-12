@@ -5,7 +5,7 @@ try {
   console.warn("Échec chargement initial idb dans SW :", e);
 }
 
-const CACHE_NAME = "troc-campus-v11";
+const CACHE_NAME = "troc-campus-v12";
 
 const APP_SHELL = [
   "/",
@@ -266,3 +266,22 @@ async function flushOutboxSW() {
     log(`sync-outbox erreur globale : ${err.message}`);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Notifications : interaction lors du clic sur une notification Android
+// ---------------------------------------------------------------------------
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow("/");
+      }
+    })
+  );
+});

@@ -880,7 +880,10 @@ modalNotif?.addEventListener("click", (e) => {
 });
 
 btnNotifAction?.addEventListener("click", async () => {
-  if (!("Notification" in window)) return;
+  if (!("Notification" in window)) {
+    showToast("⚠️ Notifications non supportées par ce navigateur.");
+    return;
+  }
   let permission;
   try {
     permission = await Notification.requestPermission();
@@ -890,37 +893,69 @@ btnNotifAction?.addEventListener("click", async () => {
   updateNotifModalState();
   if (permission === "granted") {
     btnNotifToggle?.classList.add("active");
-    showToast("🎉 Alertes campus activées !");
-    await sendSampleNotification();
+    const sent = await sendSampleNotification();
+    if (sent) {
+      showToast("🎉 Alertes activées et notification envoyée !");
+    } else {
+      showToast("🎉 Alertes campus activées.");
+    }
   } else if (permission === "denied") {
-    showToast("⚠️ Notifications bloquées.");
+    showToast("⚠️ Notifications bloquées dans le navigateur.");
   }
 });
 
 btnNotifTest?.addEventListener("click", async () => {
-  await sendSampleNotification();
-  showToast("📣 Notification de test envoyée !");
+  const sent = await sendSampleNotification();
+  if (sent) {
+    showToast("📲 Notification envoyée ! Glissez le volet Android pour voir.");
+  }
 });
 
 async function sendSampleNotification() {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  if (!("Notification" in window)) {
+    showToast("⚠️ Notifications non supportées sur ce terminal.");
+    return false;
+  }
+  if (Notification.permission !== "granted") {
+    showToast(`⚠️ Permission requise (${Notification.permission}). Touchez d'abord "Activer les alertes".`);
+    return false;
+  }
   try {
+    const title = "Troc'Campus 🎒";
+    const options = {
+      body: "Alertes campus actives : vous serez notifié dès qu'un don est publié !",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/favicon.png",
+      tag: `troc-alert-${Date.now()}`,
+      renotify: true,
+      vibrate: [200, 100, 200],
+      data: { url: "/" }
+    };
+
+    // Sur Android Chrome, showNotification via Service Worker est OBLIGATOIRE
+    // (new Notification() lève TypeError: Illegal constructor sur mobile)
     if ("serviceWorker" in navigator) {
-      const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification("Troc'Campus 🎒", {
-        body: "Alertes campus actives : vous serez notifié dès qu'un don est publié !",
-        icon: "/icons/icon-192.png",
-        badge: "/icons/favicon.png",
-        tag: "troc-welcome"
-      });
-    } else {
-      new Notification("Troc'Campus 🎒", {
-        body: "Alertes campus actives : vous serez notifié dès qu'un don est publié !",
-        icon: "/icons/icon-192.png"
-      });
+      let reg = await navigator.serviceWorker.getRegistration();
+      if (!reg || !reg.active) {
+        reg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Service Worker non disponible")), 2500))
+        ]).catch(() => reg);
+      }
+
+      if (reg && typeof reg.showNotification === "function") {
+        await reg.showNotification(title, options);
+        return true;
+      }
     }
+
+    // Repli standard pour navigateurs de bureau (Desktop)
+    new Notification(title, options);
+    return true;
   } catch (err) {
     console.error("Erreur émission notification:", err);
+    showToast(`❌ Erreur notification : ${err.message || err}`);
+    return false;
   }
 }
 
