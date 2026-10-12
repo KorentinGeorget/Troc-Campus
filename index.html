@@ -275,24 +275,10 @@
           <label>Photo de l'objet (optionnelle)</label>
           <div class="camera-card">
             <div class="camera-actions">
-              <button type="button" id="btn-camera" class="btn btn-sm btn-camera">📷 Ouvrir la caméra</button>
-              <label for="photo-file" class="btn btn-sm btn-ghost-action" style="cursor: pointer;">📁 Choisir une image</label>
-              <input type="file" id="photo-file" accept="image/*" capture="environment" hidden>
+              <button type="button" id="btn-camera" class="btn btn-sm btn-camera">📷 Prendre une photo</button>
+              <label for="photo-file" class="btn btn-sm btn-ghost-action" style="cursor: pointer;">📁 Choisir depuis la galerie / fichiers</label>
+              <input type="file" id="photo-file" accept="image/*" hidden>
             </div>
-
-            <!-- Message d'erreur caméra si permission refusée -->
-            <div id="camera-error" class="alert-box" hidden></div>
-
-            <!-- Flux vidéo caméra en direct -->
-            <div id="video-wrapper" class="video-preview-wrapper" hidden>
-              <video id="camera-video" playsinline autoplay muted></video>
-              <div class="video-overlay">
-                <button type="button" id="btn-capture" class="btn btn-sm btn-primary">Capturer</button>
-                <button type="button" id="btn-camera-close" class="btn btn-sm btn-ghost-white">Fermer</button>
-              </div>
-            </div>
-
-            <canvas id="camera-canvas" hidden></canvas>
 
             <!-- Aperçu de la photo capturée/choisie -->
             <div id="photo-preview-box" class="photo-preview-card" hidden>
@@ -310,6 +296,30 @@
           <button type="submit" id="btn-submit-form" class="btn btn-primary">Publier l'annonce</button>
         </div>
       </form>
+    </div>
+  </dialog>
+
+  <!-- Modal Dédiée : Prise de Vue Caméra Mobile & Desktop (Plein écran / Viewfinder) -->
+  <dialog id="modal-camera" class="modal modal-camera-dialog">
+    <div class="camera-fullscreen-box">
+      <div class="camera-fullscreen-header">
+        <span class="camera-title">Prise de vue</span>
+        <button type="button" id="btn-camera-close" class="btn-camera-icon-close" aria-label="Fermer la caméra">✕</button>
+      </div>
+
+      <div class="camera-viewport-area">
+        <video id="camera-video" playsinline autoplay muted></video>
+        <div id="camera-error" class="camera-alert-overlay" hidden></div>
+        <canvas id="camera-canvas" hidden></canvas>
+      </div>
+
+      <div class="camera-fullscreen-footer">
+        <button type="button" id="btn-camera-cancel" class="btn-camera-secondary">Annuler</button>
+        <button type="button" id="btn-capture" class="shutter-button" aria-label="Déclencher la prise de vue">
+          <span class="shutter-inner"></span>
+        </button>
+        <div style="width: 60px;"></div> <!-- Équilibreur flex -->
+      </div>
     </div>
   </dialog>
 

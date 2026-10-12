@@ -1,7 +1,7 @@
 // sw.js — Service Worker de Troc'Campus
 // Versioning du cache, App Shell, gestion hors ligne, Background Sync et Share Target
 
-const CACHE_NAME = "troc-campus-v2";
+const CACHE_NAME = "troc-campus-v3";
 
 const APP_SHELL = [
   "/",

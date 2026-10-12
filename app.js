@@ -374,14 +374,15 @@ typeSelect?.addEventListener("change", () => {
   }
 });
 
-// Caméra (getUserMedia)
+// Caméra (getUserMedia avec Viewfinder Plein Écran Dédié)
 let cameraStream = null;
 let currentPhotoDataUrl = null;
 
+const modalCamera = document.querySelector("#modal-camera");
 const btnCamera = document.querySelector("#btn-camera");
 const btnCapture = document.querySelector("#btn-capture");
 const btnCameraClose = document.querySelector("#btn-camera-close");
-const videoWrapper = document.querySelector("#video-wrapper");
+const btnCameraCancel = document.querySelector("#btn-camera-cancel");
 const cameraVideo = document.querySelector("#camera-video");
 const cameraCanvas = document.querySelector("#camera-canvas");
 const cameraError = document.querySelector("#camera-error");
@@ -391,27 +392,31 @@ const btnPhotoRemove = document.querySelector("#btn-photo-remove");
 const photoFileInput = document.querySelector("#photo-file");
 
 btnCamera?.addEventListener("click", async () => {
-  cameraError.hidden = true;
+  if (cameraError) cameraError.hidden = true;
+  modalCamera?.showModal();
 
   if (!navigator.mediaDevices?.getUserMedia) {
-    cameraError.textContent = "Caméra non supportée par votre navigateur. Vous pouvez choisir une image depuis vos fichiers.";
-    cameraError.hidden = false;
+    if (cameraError) {
+      cameraError.textContent = "Caméra non supportée par votre navigateur. Vous pouvez choisir une image depuis vos fichiers.";
+      cameraError.hidden = false;
+    }
     return;
   }
 
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" } }
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }
     });
     cameraVideo.srcObject = cameraStream;
     await cameraVideo.play();
-    videoWrapper.hidden = false;
   } catch (err) {
     log(`Refus caméra : ${err.name}`, "camera");
-    cameraError.textContent = (err.name === "NotAllowedError" || err.name === "PermissionDeniedError")
-      ? "Permission caméra refusée. Vous pouvez autoriser la caméra dans les réglages du navigateur ou choisir un fichier ci-dessous."
-      : "Impossible d'accéder à la caméra.";
-    cameraError.hidden = false;
+    if (cameraError) {
+      cameraError.textContent = (err.name === "NotAllowedError" || err.name === "PermissionDeniedError")
+        ? "⚠️ Permission caméra refusée. Vous pouvez autoriser la caméra dans les réglages du navigateur ou choisir une photo depuis votre galerie."
+        : "Impossible d'accéder à la caméra.";
+      cameraError.hidden = false;
+    }
   }
 });
 
@@ -424,11 +429,12 @@ btnCapture?.addEventListener("click", () => {
 
   const ctx = cameraCanvas.getContext("2d");
   ctx.drawImage(cameraVideo, 0, 0, w, h);
-  currentPhotoDataUrl = cameraCanvas.toDataURL("image/jpeg", 0.82);
+  currentPhotoDataUrl = cameraCanvas.toDataURL("image/jpeg", 0.85);
 
   stopCamera();
+  modalCamera?.close();
   showPhotoPreview(currentPhotoDataUrl);
-  showToast("📸 Photo enregistrée !");
+  showToast("📸 Photo capturée avec succès !");
 });
 
 function stopCamera() {
@@ -436,10 +442,19 @@ function stopCamera() {
     cameraStream.getTracks().forEach(t => t.stop());
     cameraStream = null;
   }
-  if (videoWrapper) videoWrapper.hidden = true;
 }
 
-btnCameraClose?.addEventListener("click", stopCamera);
+function closeCameraModal() {
+  stopCamera();
+  modalCamera?.close();
+}
+
+btnCameraClose?.addEventListener("click", closeCameraModal);
+btnCameraCancel?.addEventListener("click", closeCameraModal);
+
+modalCamera?.addEventListener("click", (e) => {
+  if (e.target === modalCamera) closeCameraModal();
+});
 
 photoFileInput?.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
