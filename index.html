@@ -2,10 +2,10 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Troc'Campus — Petites annonces étudiantes</title>
   <meta name="description" content="Plateforme d'échange, de don et de vente entre étudiants sur les campus universitaires. Fonctionne hors ligne.">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#059669">
 
   <!-- PWA & Mobile Web App -->
   <link rel="manifest" href="manifest.json">
@@ -76,33 +76,48 @@
 </head>
 <body>
 
-  <!-- Bandeau de mise à jour discrète -->
+  <!-- Bandeau de mise à jour SW discrète -->
   <aside id="update-banner" class="update-banner" role="alert" hidden>
     <div class="update-banner-inner">
-      <span>Une nouvelle version est disponible.</span>
+      <span>✨ Une nouvelle version est prête !</span>
       <button type="button" id="btn-update-apply" class="btn btn-sm btn-light">Mettre à jour</button>
     </div>
   </aside>
 
-  <!-- En-tête -->
+  <!-- Bannière Bonus : Conflit de synchronisation If-Match 412 (Cheatsheet § 11) -->
+  <aside id="conflict-banner" class="conflict-banner" role="alert" hidden>
+    <div class="conflict-banner-inner">
+      <div class="conflict-text">
+        <strong>⚠️ Conflit de version détecté (HTTP 412)</strong>
+        <p id="conflict-msg">Une annonce a été modifiée sur un autre appareil pendant que vous étiez hors ligne.</p>
+      </div>
+      <div class="conflict-actions">
+        <button type="button" id="btn-conflict-mine" class="btn btn-sm btn-light">Garder ma version</button>
+        <button type="button" id="btn-conflict-theirs" class="btn btn-sm btn-ghost-white">Prendre la leur</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- En-tête de navigation -->
   <header class="app-header">
     <div class="header-container">
-      <a href="/" class="brand">
-        <img src="icons/logo.svg" alt="" class="brand-logo" width="34" height="34">
-        <span class="brand-name">Troc'Campus</span>
-      </a>
-
-      <div class="header-status">
+      <div class="header-left">
+        <a href="/" class="brand">
+          <img src="icons/logo.svg" alt="" class="brand-logo" width="32" height="32">
+          <span class="brand-name">Troc'Campus</span>
+        </a>
         <div class="status-indicator" id="network-status" title="État de la connexion">
           <span class="status-dot"></span>
           <span class="status-text" id="network-text">En ligne</span>
         </div>
-        <span id="sync-status" class="sync-pill" hidden>Synchronisation...</span>
       </div>
 
-      <div class="header-actions">
-        <button type="button" id="btn-install" class="btn btn-sm btn-ghost" hidden>📲 Installer</button>
-        <button type="button" id="btn-open-form" class="btn btn-primary">+ Déposer une annonce</button>
+      <div class="header-right">
+        <!-- Bonus Notifications Push / Locales (Cheatsheet § 12) -->
+        <button type="button" id="btn-notif-toggle" class="btn-icon-nav" title="Activer les alertes de nouvelles annonces" aria-label="Notifications">🔔</button>
+        <span id="sync-status" class="sync-pill" hidden>Sync...</span>
+        <button type="button" id="btn-install" class="btn-sm btn-install" hidden>Installer</button>
+        <button type="button" id="btn-open-form" class="btn btn-primary btn-publish">+ Déposer</button>
       </div>
     </div>
   </header>
@@ -110,11 +125,11 @@
   <main class="app-main">
     <!-- Barre de contrôle : Titre et Filtres -->
     <section class="toolbar" aria-label="Filtres des annonces">
-      <div class="toolbar-left">
-        <h1 class="page-title">Annonces sur le campus (<span id="ad-count">3</span>)</h1>
-        <p class="page-subtitle">Dons, ventes et trocs entre étudiants · Accessible hors ligne</p>
+      <div class="toolbar-heading">
+        <h1 class="page-title">Annonces récentes (<span id="ad-count">3</span>)</h1>
+        <p class="page-subtitle">Dons, ventes et trocs étudiants · Utilisable hors ligne</p>
       </div>
-      <div class="toolbar-right">
+      <div class="toolbar-filters">
         <nav class="filter-tabs" aria-label="Filtrer par catégorie">
           <button type="button" class="tab active" data-filter="all">Toutes</button>
           <button type="button" class="tab" data-filter="don">Dons</button>
@@ -206,15 +221,15 @@
       <div class="modal-header">
         <div>
           <h2 class="modal-title">Déposer une annonce</h2>
-          <p class="modal-subtitle">Visible par les étudiants du campus et accessible hors ligne</p>
+          <p class="modal-subtitle">Visible sur le campus et enregistrée hors ligne</p>
         </div>
         <button type="button" id="btn-close-form" class="btn-icon-close" aria-label="Fermer">✕</button>
       </div>
 
       <form id="form-annonce" autocomplete="off" class="modal-body">
         <div class="form-row">
-          <label for="ad-title">Titre de l'annonce *</label>
-          <input type="text" id="ad-title" placeholder="Ex : Manuel d'Algèbre L2, Écran 24 pouces..." required>
+          <label for="ad-title">Titre *</label>
+          <input type="text" id="ad-title" placeholder="Ex : Manuel d'Algèbre L2, Écran 24''..." required>
         </div>
 
         <div class="form-grid-2">
@@ -245,14 +260,14 @@
             </select>
           </div>
           <div class="form-row">
-            <label for="ad-contact">Contact (email ou téléphone) *</label>
+            <label for="ad-contact">Contact (email ou tél) *</label>
             <input type="text" id="ad-contact" placeholder="etudiant@univ-corse.fr" required>
           </div>
         </div>
 
         <div class="form-row">
-          <label for="ad-desc">Description détaillée *</label>
-          <textarea id="ad-desc" rows="3" placeholder="État du matériel, matière concernée, disponibilités pour la remise..." required></textarea>
+          <label for="ad-desc">Description *</label>
+          <textarea id="ad-desc" rows="3" placeholder="État du matériel, disponibilités pour la remise..." required></textarea>
         </div>
 
         <!-- Section Caméra & Photo -->
@@ -261,7 +276,7 @@
           <div class="camera-card">
             <div class="camera-actions">
               <button type="button" id="btn-camera" class="btn btn-sm btn-camera">📷 Ouvrir la caméra</button>
-              <label for="photo-file" class="btn btn-sm btn-ghost" style="cursor: pointer;">📁 Choisir une image</label>
+              <label for="photo-file" class="btn btn-sm btn-ghost-action" style="cursor: pointer;">📁 Choisir une image</label>
               <input type="file" id="photo-file" accept="image/*" capture="environment" hidden>
             </div>
 
@@ -273,7 +288,7 @@
               <video id="camera-video" playsinline autoplay muted></video>
               <div class="video-overlay">
                 <button type="button" id="btn-capture" class="btn btn-sm btn-primary">Capturer</button>
-                <button type="button" id="btn-camera-close" class="btn btn-sm btn-ghost">Fermer</button>
+                <button type="button" id="btn-camera-close" class="btn btn-sm btn-ghost-white">Fermer</button>
               </div>
             </div>
 
@@ -283,7 +298,7 @@
             <div id="photo-preview-box" class="photo-preview-card" hidden>
               <img id="photo-preview-img" alt="Aperçu photo">
               <div class="photo-preview-info">
-                <span>Photo prête</span>
+                <span>Photo sélectionnée</span>
                 <button type="button" id="btn-photo-remove" class="btn-text-danger">Supprimer la photo</button>
               </div>
             </div>
@@ -321,7 +336,7 @@
           </div>
         </div>
         <div class="contact-actions">
-          <a id="btn-email-link" href="#" class="btn btn-outline" style="text-decoration: none; width: 100%; text-align: center;">Ouvrir l'application de messagerie</a>
+          <a id="btn-email-link" href="#" class="btn btn-outline" style="text-decoration: none; width: 100%; text-align: center;">Ouvrir la messagerie</a>
         </div>
       </div>
     </div>

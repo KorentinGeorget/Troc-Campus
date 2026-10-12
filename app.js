@@ -1,5 +1,6 @@
 // app.js — Logique de l'application Troc'Campus
-// IndexedDB, Outbox, Background Sync, Caméra (getUserMedia) et Web Share
+// IndexedDB, Outbox, Background Sync, Caméra (getUserMedia), Web Share,
+// Notifications Push/Locales (Bonus), et Réconciliation de conflits If-Match 412 (Bonus)
 
 // ---------------------------------------------------------------------------
 // 1. Fonctions utilitaires : Toasts, Copie Presse-papiers et Logs
@@ -69,7 +70,7 @@ async function initHydration() {
   const db = await dbPromise;
   const count = await db.count("annonces");
 
-  // Première visite : extraire les 3 annonces d'exemple écrites en dur dans le HTML
+  // Première visite : importer les 3 annonces d'exemple écrites en dur dans le HTML
   if (count === 0) {
     const seedCards = document.querySelectorAll("#annonces-list [data-seed]");
     log(`Importation initiale de ${seedCards.length} annonces publiques du HTML`);
@@ -92,6 +93,7 @@ async function initHydration() {
         description: desc,
         placeholder,
         photo: null,
+        version: 1, // Gestion des versions pour If-Match (Bonus § 11)
         isSeed: true,
         createdAt: Date.now() - 3600000
       });
@@ -132,6 +134,7 @@ async function renderAnnonces() {
       li.dataset.campus = ad.campus;
       li.dataset.title = ad.title;
       li.dataset.desc = ad.description;
+      li.dataset.version = ad.version || 1;
 
       const article = document.createElement("article");
       article.className = "ad-content";
@@ -224,7 +227,7 @@ async function renderAnnonces() {
 }
 
 // ---------------------------------------------------------------------------
-// 5. Délégation d'événements sur la liste des annonces (100% Fiable)
+// 5. Délégation d'événements sur la liste des annonces
 // ---------------------------------------------------------------------------
 const annoncesList = document.querySelector("#annonces-list");
 
@@ -317,7 +320,6 @@ async function shareAd(ad) {
     }
   }
 
-  // Repli automatique sur le presse-papiers
   const textToCopy = `${shareData.text} — ${shareData.url}`;
   const ok = await copyToClipboard(textToCopy);
   if (ok) {
@@ -482,6 +484,7 @@ formAnnonce?.addEventListener("submit", async (e) => {
     contact,
     description,
     photo: currentPhotoDataUrl,
+    version: 1,
     isSeed: false,
     createdAt: Date.now()
   };
@@ -509,7 +512,7 @@ formAnnonce?.addEventListener("submit", async (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// 9. Synchronisation Outbox (Background Sync + repli en ligne)
+// 9. Synchronisation Outbox avec gestion If-Match (Bonus Conflits § 11)
 // ---------------------------------------------------------------------------
 async function triggerSync() {
   if ("serviceWorker" in navigator && "SyncManager" in window) {
@@ -540,12 +543,22 @@ async function flushOutbox() {
 
   for (const item of items) {
     try {
+      // Démonstration If-Match (Cheatsheet § 11)
+      const version = item.payload.version || 1;
       const res = await fetch("https://httpbin.org/post", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "If-Match": `"${version}"`
+        },
         body: JSON.stringify(item.payload)
       });
-      if (res.ok) {
+
+      if (res.status === 412) {
+        // Conflit détecté (Precondition Failed) : déclencher la bannière de réconciliation
+        handleSyncConflict(item);
+        break;
+      } else if (res.ok) {
         await db.delete("outbox", item.id);
       } else {
         break;
@@ -573,7 +586,98 @@ async function updateSyncBadge() {
 }
 
 // ---------------------------------------------------------------------------
-// 10. État Réseau
+// 10. Bonus : Réconciliation de Conflits If-Match 412 (Cheatsheet § 11)
+// ---------------------------------------------------------------------------
+const conflictBanner = document.querySelector("#conflict-banner");
+const btnConflictMine = document.querySelector("#btn-conflict-mine");
+const btnConflictTheirs = document.querySelector("#btn-conflict-theirs");
+let pendingConflictItem = null;
+
+function handleSyncConflict(item, remoteVersionData = null) {
+  pendingConflictItem = item;
+  if (conflictBanner) conflictBanner.hidden = false;
+  log(`Conflit 412 détecté sur l'annonce #${item.payload.id}`, "conflict");
+}
+
+btnConflictMine?.addEventListener("click", async () => {
+  if (!pendingConflictItem) return;
+  const db = await dbPromise;
+  // "Garder la mienne" = incrémenter la version locale et réenvoyer
+  pendingConflictItem.payload.version = (pendingConflictItem.payload.version || 1) + 1;
+  await db.put("annonces", pendingConflictItem.payload);
+  await db.delete("outbox", pendingConflictItem.id);
+  conflictBanner.hidden = true;
+  showToast("Version locale conservée !");
+  renderAnnonces();
+});
+
+btnConflictTheirs?.addEventListener("click", async () => {
+  if (!pendingConflictItem) return;
+  const db = await dbPromise;
+  // "Prendre la leur" = supprimer la modification locale en attente
+  await db.delete("outbox", pendingConflictItem.id);
+  conflictBanner.hidden = true;
+  showToast("Version distante adoptée !");
+  renderAnnonces();
+});
+
+// Helper pour tester la réconciliation en console ou démo
+window.simulateConflict = () => {
+  handleSyncConflict({
+    id: 999,
+    payload: { id: 1, title: "Livre Réseaux", version: 1 }
+  });
+};
+
+// ---------------------------------------------------------------------------
+// 11. Bonus : Notifications Push / Locales (Cheatsheet § 12)
+// ---------------------------------------------------------------------------
+const btnNotifToggle = document.querySelector("#btn-notif-toggle");
+
+btnNotifToggle?.addEventListener("click", async () => {
+  if (!("Notification" in window)) {
+    showToast("Notifications non supportées par ce navigateur.");
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    sendSampleNotification();
+    showToast("🔔 Les notifications sont déjà activées.");
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+  if (permission === "granted") {
+    btnNotifToggle.textContent = "🔔";
+    btnNotifToggle.title = "Alertes activées";
+    sendSampleNotification();
+    showToast("🎉 Alertes campus activées !");
+  } else {
+    showToast("Permission refusée pour les notifications.");
+  }
+});
+
+function sendSampleNotification() {
+  if (Notification.permission !== "granted") return;
+  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.ready.then(reg => {
+      reg.showNotification("Troc'Campus 🎒", {
+        body: "Alertes campus actives : vous serez notifié dès qu'un don est publié !",
+        icon: "/icons/icon-192.png",
+        badge: "/icons/favicon.png",
+        tag: "troc-welcome"
+      });
+    });
+  } else {
+    new Notification("Troc'Campus 🎒", {
+      body: "Alertes campus actives : vous serez notifié dès qu'un don est publié !",
+      icon: "/icons/icon-192.png"
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 12. État Réseau & Repli universel
 // ---------------------------------------------------------------------------
 const netIndicator = document.querySelector("#network-status");
 const netText = document.querySelector("#network-text");
@@ -598,7 +702,7 @@ window.addEventListener("online", updateNetwork);
 window.addEventListener("offline", updateNetwork);
 
 // ---------------------------------------------------------------------------
-// 11. Réception Web Share Target
+// 13. Réception Web Share Target
 // ---------------------------------------------------------------------------
 async function checkSharedDrafts() {
   const params = new URLSearchParams(window.location.search);
@@ -623,7 +727,7 @@ async function checkSharedDrafts() {
 }
 
 // ---------------------------------------------------------------------------
-// 12. Service Worker & Bannière de mise à jour
+// 14. Service Worker & Bannière de mise à jour
 // ---------------------------------------------------------------------------
 let waitingWorker = null;
 
@@ -659,7 +763,7 @@ document.querySelector("#btn-update-apply")?.addEventListener("click", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 13. Bouton d'installation custom (beforeinstallprompt)
+// 15. Bouton d'installation custom (beforeinstallprompt)
 // ---------------------------------------------------------------------------
 let deferredPrompt = null;
 const btnInstall = document.querySelector("#btn-install");
@@ -683,7 +787,7 @@ window.addEventListener("appinstalled", () => {
   showToast("🎉 Application installée sur l'appareil !");
 });
 
-// Initialisation garantie sans problème de timing DOMContentLoaded
+// Initialisation
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     initHydration();

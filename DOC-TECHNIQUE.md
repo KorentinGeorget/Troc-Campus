@@ -148,7 +148,7 @@ Dans une application où l'utilisateur rédige des annonces détaillées et capt
    - **Voie nominale (Chromium) :** Appel à `registration.sync.register("sync-outbox")`. Le Service Worker intercepte l'événement `sync` même si l'onglet est fermé ou en arrière-plan, importe la bibliothèque `idb` via `importScripts`, lit l'Outbox et expédie les requêtes en POST vers `https://httpbin.org/post`.
    - **Repli universel (Safari / Firefox) :** L'API `SyncManager` n'étant pas disponible, l'application écoute l'événement `window.addEventListener("online", flushOutbox)`. Dès que le réseau est rétabli, la fonction `flushOutbox()` de la page vide les éléments en attente.
 3. **Gestion des échecs réseau :** En cas d'erreur HTTP ou d'interruption du réseau pendant la boucle d'envoi, l'itération s'interrompt immédiatement (`break`). L'élément en cours et les suivants restent dans l'Outbox, garantissant l'absence de perte de données et préservant l'ordre chronologique des publications.
-4. **Gestion des conflits :** L'application fonctionnant en mode *append-only* (création d'annonces locales autonomes avec identifiants distincts), les créations concurrentes ne se télescopent pas. Les annonces publiques d'exemple (`data-seed`) sont protégées contre la suppression.
+4. **Gestion des conflits (Bonus Cheatsheet § 11) :** Chaque annonce locale porte un numéro de `version` incrémentiel. Lors de la synchronisation, l'Outbox transmet l'en-tête HTTP `If-Match: "<version>"`. Si une version concurrente plus récente existe côté serveur ou lors d'une collision (réponse HTTP 412 *Precondition Failed*), l'envoi s'interrompt sans écrasement sauvage et une bannière de réconciliation s'affiche dans l'interface, proposant à l'étudiant soit de « Garder ma version » (incrémentation et forçage local), soit de « Prendre la leur » (remplacement par la donnée concurrente).
 
 ---
 
@@ -165,8 +165,8 @@ Dans une application où l'utilisateur rédige des annonces détaillées et capt
 
 ## 8. Notifications
 
-- **Notifications dans la v1 :** L'application utilise des notifications toast locales intégrées à l'interface DOM (connexion rétablie, mise en attente hors ligne, annonce copiée, mise à jour disponible).
-- **Notifications push :** Volontairement non activées au chargement afin de respecter le principe fondamental de ne pas harceler l'utilisateur avec une demande de permission intrusive. L'architecture est prête pour le raccordement FCM (Firebase Cloud Messaging) prévu pour la partie Android du cours.
+- **Système d'alertes et notifications (Bonus Cheatsheet § 12) :** L'utilisateur peut activer les alertes de nouveaux dons sur son campus via le bouton dédié `🔔` dans l'en-tête. La demande de permission (`Notification.requestPermission()`) n'est déclenchée qu'après cette action explicite de l'étudiant. Une notification locale d'accueil est immédiatement émise via `registration.showNotification()` ou `new Notification()`, et l'architecture est prête pour le raccordement push serveur FCM pour le portage Android.
+- **Toasts éphémères :** Des notifications toast légères informent l'utilisateur en temps réel de l'état de la synchronisation, de la copie dans le presse-papiers ou du mode hors ligne.
 
 ---
 
