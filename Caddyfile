@@ -33,7 +33,7 @@
     header @static Cache-Control "public, max-age=86400"
 
     # Fichiers applicatifs clés et Service Worker : aucune mise en cache HTTP
-    @nocache path /sw.js /app.js /style.css /index.html /manifest.json /offline.html
+    @nocache path /sw.js /app.js /style.css /index.html /manifest.json /offline.html /idb.js
     header @nocache Cache-Control "no-cache, no-store, must-revalidate"
 
     # Servir les fichiers statiques (renvoie un vrai 404 si le fichier n'existe pas)

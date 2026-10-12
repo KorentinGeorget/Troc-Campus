@@ -30,7 +30,7 @@ Sur les campus universitaires (notamment les campus Mariani et Grimaldi de l'Uni
 
 ### Stack technique
 - **Frontend :** HTML5 sémantique, CSS3 moderne (variables, flexbox/grid, design sombre responsive, variables CSS sans préprocesseur) et JavaScript natif moderne (ES Modules).
-- **Stockage local :** IndexedDB encapsulé via la bibliothèque légère officielle **`idb` v8** (Jake Archibald).
+- **Stockage local :** IndexedDB encapsulé via la bibliothèque légère officielle **`idb`** (Jake Archibald), servie localement (`/idb.js`) pour une autonomie totale sans dépendance CDN externe.
 - **Service Worker :** Écrit à la main en JavaScript natif, sans abstraction Workbox, pour maîtriser précisément le cycle de vie, la mise en cache et la synchronisation.
 - **Raison du choix Vanilla :** L'obligation de fournir un contenu public lisible par `curl` disqualifie les SPA classiques sans serveur SSR complexe. L'approche sans étape de compilation (zéro bundler Webpack/Vite) écarte tout risque de régression de build et respecte fidèlement les enseignements des TD 8 et 9.
 

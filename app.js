@@ -52,60 +52,74 @@ function log(msg, category = "app") {
 // ---------------------------------------------------------------------------
 // 2. Base de données locale IndexedDB (Bibliothèque idb)
 // ---------------------------------------------------------------------------
-const dbPromise = window.idb.openDB("troc-campus-db", 1, {
-  upgrade(db) {
-    if (!db.objectStoreNames.contains("annonces")) {
-      db.createObjectStore("annonces", { keyPath: "id", autoIncrement: true });
-    }
-    if (!db.objectStoreNames.contains("outbox")) {
-      db.createObjectStore("outbox", { keyPath: "id", autoIncrement: true });
-    }
-    if (!db.objectStoreNames.contains("shared_drafts")) {
-      db.createObjectStore("shared_drafts", { keyPath: "id", autoIncrement: true });
-    }
-  }
-});
+const idbLib = window.idb || (typeof idb !== "undefined" ? idb : null);
+const dbPromise = idbLib
+  ? idbLib.openDB("troc-campus-db", 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains("annonces")) {
+          db.createObjectStore("annonces", { keyPath: "id", autoIncrement: true });
+        }
+        if (!db.objectStoreNames.contains("outbox")) {
+          db.createObjectStore("outbox", { keyPath: "id", autoIncrement: true });
+        }
+        if (!db.objectStoreNames.contains("shared_drafts")) {
+          db.createObjectStore("shared_drafts", { keyPath: "id", autoIncrement: true });
+        }
+      }
+    }).catch((err) => {
+      console.warn("Échec ouverture IndexedDB :", err);
+      return null;
+    })
+  : Promise.resolve(null);
 
 // ---------------------------------------------------------------------------
 // 3. Hydratation initiale depuis le HTML public (Critère curl/SEO)
 // ---------------------------------------------------------------------------
 async function initHydration() {
-  const db = await dbPromise;
-  const count = await db.count("annonces");
-
-  // Première visite : importer les 3 annonces d'exemple écrites en dur dans le HTML
-  if (count === 0) {
-    const seedCards = document.querySelectorAll("#annonces-list [data-seed]");
-    log(`Importation initiale de ${seedCards.length} annonces publiques du HTML`);
-
-    for (const card of seedCards) {
-      const title = card.querySelector(".ad-title")?.textContent.trim() || "Annonce";
-      const desc = card.querySelector(".ad-desc")?.textContent.trim() || "";
-      const campus = card.querySelector(".ad-location")?.textContent.replace("📍", "").trim() || "Campus Mariani, Corte";
-      const type = card.dataset.type || "don";
-      const price = Number(card.dataset.price) || 0;
-      const contact = card.dataset.contact || "contact@univ-corse.fr";
-      const placeholder = card.querySelector(".thumb-icon")?.textContent.trim() || "📦";
-
-      await db.add("annonces", {
-        title,
-        type,
-        price,
-        campus,
-        contact,
-        description: desc,
-        placeholder,
-        photo: null,
-        version: 1, // Gestion des versions pour If-Match (Bonus § 11)
-        isSeed: true,
-        createdAt: Date.now() - 3600000
-      });
+  try {
+    const db = await dbPromise;
+    if (!db) {
+      log("IndexedDB non disponible ou ignoré (crawl / sandbox bot) : maintien du contenu HTML statique.");
+      return;
     }
-  }
+    const count = await db.count("annonces");
 
-  await checkSharedDrafts();
-  await renderAnnonces();
-  await updateSyncBadge();
+    // Première visite : importer les 3 annonces d'exemple écrites en dur dans le HTML
+    if (count === 0) {
+      const seedCards = document.querySelectorAll("#annonces-list [data-seed]");
+      log(`Importation initiale de ${seedCards.length} annonces publiques du HTML`);
+
+      for (const card of seedCards) {
+        const title = card.querySelector(".ad-title")?.textContent.trim() || "Annonce";
+        const desc = card.querySelector(".ad-desc")?.textContent.trim() || "";
+        const campus = card.querySelector(".ad-location")?.textContent.replace("📍", "").trim() || "Campus Mariani, Corte";
+        const type = card.dataset.type || "don";
+        const price = Number(card.dataset.price) || 0;
+        const contact = card.dataset.contact || "contact@univ-corse.fr";
+        const placeholder = card.querySelector(".thumb-icon")?.textContent.trim() || "📦";
+
+        await db.add("annonces", {
+          title,
+          type,
+          price,
+          campus,
+          contact,
+          description: desc,
+          placeholder,
+          photo: null,
+          version: 1, // Gestion des versions pour If-Match (Bonus § 11)
+          isSeed: true,
+          createdAt: Date.now() - 3600000
+        });
+      }
+    }
+
+    await checkSharedDrafts();
+    await renderAnnonces();
+    await updateSyncBadge();
+  } catch (err) {
+    console.warn("Erreur initHydration :", err);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -114,20 +128,28 @@ async function initHydration() {
 let currentFilter = "all";
 
 async function renderAnnonces() {
-  const db = await dbPromise;
-  const allAnnonces = await db.getAll("annonces");
+  try {
+    const db = await dbPromise;
+    if (!db) return;
+    const allAnnonces = await db.getAll("annonces");
 
-  const filtered = currentFilter === "all"
-    ? allAnnonces
-    : allAnnonces.filter(a => a.type === currentFilter);
+    // Sécurité critique SEO / Bots : si la base est vide (ex: environnement headless sans persistance ou crawl),
+    // ne JAMAIS vider la liste des annonces pré-remplies du HTML public !
+    if (!allAnnonces || allAnnonces.length === 0) {
+      return;
+    }
 
-  const countEl = document.querySelector("#ad-count");
-  if (countEl) countEl.textContent = filtered.length;
+    const filtered = currentFilter === "all"
+      ? allAnnonces
+      : allAnnonces.filter(a => a.type === currentFilter);
 
-  const listEl = document.querySelector("#annonces-list");
-  if (!listEl) return;
+    const countEl = document.querySelector("#ad-count");
+    if (countEl) countEl.textContent = filtered.length;
 
-  listEl.replaceChildren(
+    const listEl = document.querySelector("#annonces-list");
+    if (!listEl) return;
+
+    listEl.replaceChildren(
     ...filtered.map(ad => {
       const li = document.createElement("li");
       li.className = "ad-card";
@@ -227,6 +249,9 @@ async function renderAnnonces() {
       return li;
     })
   );
+  } catch (err) {
+    console.warn("Erreur renderAnnonces :", err);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -574,6 +599,7 @@ async function flushOutbox(isManualTrigger = false) {
 
   try {
     const db = await dbPromise;
+    if (!db) return;
     const items = await db.getAll("outbox");
     if (items.length === 0) {
       syncRetryCount = 0;
@@ -669,24 +695,29 @@ async function flushOutbox(isManualTrigger = false) {
 }
 
 async function updateSyncBadge() {
-  const db = await dbPromise;
-  const remaining = await db.count("outbox");
-  const pill = document.querySelector("#sync-status");
-  if (!pill) return;
+  try {
+    const db = await dbPromise;
+    if (!db) return;
+    const remaining = await db.count("outbox");
+    const pill = document.querySelector("#sync-status");
+    if (!pill) return;
 
-  if (remaining === 0) {
-    pill.hidden = true;
-  } else {
-    pill.textContent = isFlushingOutbox ? `Envoi (${remaining})...` : `En attente (${remaining})`;
-    pill.hidden = false;
-  }
+    if (remaining === 0) {
+      pill.hidden = true;
+    } else {
+      pill.textContent = isFlushingOutbox ? `Envoi (${remaining})...` : `En attente (${remaining})`;
+      pill.hidden = false;
+    }
 
-  // Capacité Badge de l'icône (App Badge API)
-  if ("setAppBadge" in navigator) {
-    try {
-      if (remaining > 0) navigator.setAppBadge(remaining);
-      else navigator.clearAppBadge();
-    } catch (_) {}
+    // Capacité Badge de l'icône (App Badge API)
+    if ("setAppBadge" in navigator) {
+      try {
+        if (remaining > 0) navigator.setAppBadge(remaining);
+        else navigator.clearAppBadge();
+      } catch (_) {}
+    }
+  } catch (err) {
+    console.warn("Erreur updateSyncBadge :", err);
   }
 }
 
@@ -825,10 +856,12 @@ function updateNotifModalState() {
   }
 }
 
-if ("Notification" in window && Notification.permission === "granted") {
-  btnNotifToggle?.classList.add("active");
-  if (btnNotifToggle) btnNotifToggle.title = "Alertes campus actives";
-}
+try {
+  if ("Notification" in window && Notification.permission === "granted") {
+    btnNotifToggle?.classList.add("active");
+    if (btnNotifToggle) btnNotifToggle.title = "Alertes campus actives";
+  }
+} catch (_) {}
 
 // Clic sur la cloche : ouverture immédiate de la modale explicative
 btnNotifToggle?.addEventListener("click", (e) => {
@@ -897,7 +930,7 @@ async function sendSampleNotification() {
 const netIndicator = document.querySelector("#network-status");
 const netText = document.querySelector("#network-text");
 
-function updateNetwork() {
+function updateNetwork(isInitial = false) {
   const isOnline = navigator.onLine;
   if (netIndicator) {
     netIndicator.classList.toggle("off", !isOnline);
@@ -905,6 +938,9 @@ function updateNetwork() {
   if (netText) {
     netText.textContent = isOnline ? "En ligne" : "Hors ligne";
   }
+
+  // Ne pas déclencher de toast ni de vibration lors de l'initialisation de la page
+  if (isInitial) return;
 
   if (isOnline) {
     showToast("📶 Connexion rétablie : synchronisation en cours...");
@@ -917,31 +953,36 @@ function updateNetwork() {
   }
 }
 
-window.addEventListener("online", updateNetwork);
-window.addEventListener("offline", updateNetwork);
+window.addEventListener("online", () => updateNetwork(false));
+window.addEventListener("offline", () => updateNetwork(false));
 
 // ---------------------------------------------------------------------------
 // 13. Réception Web Share Target
 // ---------------------------------------------------------------------------
 async function checkSharedDrafts() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.has("shared_received")) {
-    const db = await dbPromise;
-    const drafts = await db.getAll("shared_drafts");
-    if (drafts.length > 0) {
-      const draft = drafts[0];
-      const titleInput = document.querySelector("#ad-title");
-      const descInput = document.querySelector("#ad-desc");
-      if (titleInput && draft.title) titleInput.value = draft.title;
-      if (descInput && draft.description) descInput.value = draft.description;
-      if (draft.photo) {
-        currentPhotoDataUrl = draft.photo;
-        showPhotoPreview(draft.photo);
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("shared_received")) {
+      const db = await dbPromise;
+      if (!db) return;
+      const drafts = await db.getAll("shared_drafts");
+      if (drafts.length > 0) {
+        const draft = drafts[0];
+        const titleInput = document.querySelector("#ad-title");
+        const descInput = document.querySelector("#ad-desc");
+        if (titleInput && draft.title) titleInput.value = draft.title;
+        if (descInput && draft.description) descInput.value = draft.description;
+        if (draft.photo) {
+          currentPhotoDataUrl = draft.photo;
+          showPhotoPreview(draft.photo);
+        }
+        await db.delete("shared_drafts", draft.id);
+        modalForm.showModal();
+        showToast("📥 Objet partagé importé dans le formulaire !");
       }
-      await db.delete("shared_drafts", draft.id);
-      modalForm.showModal();
-      showToast("📥 Objet partagé importé dans le formulaire !");
     }
+  } catch (err) {
+    console.warn("Erreur checkSharedDrafts :", err);
   }
 }
 
@@ -978,6 +1019,8 @@ if ("serviceWorker" in navigator) {
         }
       });
     });
+  }).catch((err) => {
+    console.warn("Échec enregistrement Service Worker ou contexte non supporté :", err);
   });
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
@@ -1066,9 +1109,9 @@ window.addEventListener("appinstalled", () => {
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     initHydration();
-    updateNetwork();
+    updateNetwork(true);
   });
 } else {
   initHydration();
-  updateNetwork();
+  updateNetwork(true);
 }

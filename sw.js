@@ -1,17 +1,18 @@
 // sw.js — Service Worker de Troc'Campus
 try {
-  importScripts("https://cdn.jsdelivr.net/npm/idb@8/build/umd.js");
+  importScripts("/idb.js");
 } catch (e) {
   console.warn("Échec chargement initial idb dans SW :", e);
 }
 
-const CACHE_NAME = "troc-campus-v10";
+const CACHE_NAME = "troc-campus-v11";
 
 const APP_SHELL = [
   "/",
   "/index.html",
   "/style.css",
   "/app.js",
+  "/idb.js",
   "/offline.html",
   "/manifest.json",
   "/annonces.md",
@@ -19,8 +20,7 @@ const APP_SHELL = [
   "/icons/logo.svg",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
-  "/icons/icon-maskable-512.png",
-  "https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"
+  "/icons/icon-maskable-512.png"
 ];
 
 // ---------------------------------------------------------------------------
