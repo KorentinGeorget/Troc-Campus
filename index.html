@@ -114,8 +114,8 @@
 
       <div class="header-right">
         <!-- Bonus Notifications Push / Locales (Cheatsheet § 12) -->
-        <button type="button" id="btn-notif-toggle" class="btn-icon-nav" title="Activer les alertes de nouvelles annonces" aria-label="Notifications">🔔</button>
-        <span id="sync-status" class="sync-pill" hidden>Sync...</span>
+        <button type="button" id="btn-notif-toggle" class="btn-icon-nav" title="Alertes et notifications campus" aria-label="Notifications">🔔</button>
+        <button type="button" id="sync-status" class="sync-pill" title="Cliquer pour synchroniser l'outbox" aria-label="État de synchronisation" hidden>Sync...</button>
         <button type="button" id="btn-install" class="btn-sm btn-install" hidden>Installer</button>
         <button type="button" id="btn-open-form" class="btn btn-primary btn-publish">+ Déposer</button>
       </div>
@@ -214,6 +214,14 @@
       </ul>
     </section>
   </main>
+
+  <!-- Pied de page avec bouton de vérification de version -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <p class="footer-copy">Troc'Campus · PWA Déconnectée & Locale</p>
+      <button type="button" id="btn-force-check-update" class="btn-footer-update">🔄 Vérifier les mises à jour</button>
+    </div>
+  </footer>
 
   <!-- Modal 1 : Déposer une annonce -->
   <dialog id="modal-form" class="modal">
@@ -353,6 +361,38 @@
         </div>
         <div class="contact-actions">
           <a id="btn-email-link" href="#" class="btn btn-outline" style="text-decoration: none; width: 100%; text-align: center;">Ouvrir la messagerie</a>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal 3 : Notifications & Alertes Campus (Bonus § 12) -->
+  <dialog id="modal-notif" class="modal">
+    <div class="modal-card modal-card-sm">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">🔔 Alertes & Notifications</h2>
+          <p class="modal-subtitle">Recevez des alertes en direct dès qu'un don ou troc est publié.</p>
+        </div>
+        <button type="button" id="btn-close-notif" class="btn-icon-close" aria-label="Fermer la fenêtre">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="notif-status-card" class="notif-status-card">
+          <div class="notif-status-indicator">
+            <span id="notif-status-badge" class="badge">Vérification...</span>
+          </div>
+          <p id="notif-status-desc" class="notif-status-desc">
+            Vérification du support de votre navigateur...
+          </p>
+        </div>
+
+        <div class="notif-actions-col">
+          <button type="button" id="btn-notif-action" class="btn btn-primary" style="width: 100%;">
+            🔔 Activer les alertes campus
+          </button>
+          <button type="button" id="btn-notif-test" class="btn btn-outline" style="width: 100%;" hidden>
+            📣 Envoyer une alerte de test
+          </button>
         </div>
       </div>
     </div>

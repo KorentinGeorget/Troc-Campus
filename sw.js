@@ -5,7 +5,7 @@ try {
   console.warn("Échec chargement initial idb dans SW :", e);
 }
 
-const CACHE_NAME = "troc-campus-v7";
+const CACHE_NAME = "troc-campus-v8";
 
 const APP_SHELL = [
   "/",
@@ -47,9 +47,22 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then(async (cache) => {
+        // Forcer le rechargement réseau sans utiliser le cache HTTP
+        for (const url of APP_SHELL) {
+          try {
+            const req = new Request(url, { cache: "reload" });
+            const res = await fetch(req);
+            if (res.ok) {
+              await cache.put(req, res);
+            }
+          } catch (err) {
+            log(`install échec partiel cache (${url}) : ${err.message}`);
+          }
+        }
+      })
       .then(() => log(`install : cache « ${CACHE_NAME} » initialisé avec succès`))
-      .catch((err) => log(`install : ÉCHEC (${err.message}) — ressource introuvable ?`))
+      .catch((err) => log(`install : ÉCHEC (${err.message})`))
   );
 });
 
@@ -143,8 +156,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 3. Ne pas intercepter les requêtes vers l'API de synchronisation (httpbin)
-  if (url.hostname.includes("httpbin.org")) {
+  // 3. Ne pas intercepter les requêtes vers l'API de synchronisation (local /api/ ou httpbin)
+  if (url.pathname.startsWith("/api/") || url.hostname.includes("httpbin.org")) {
     return;
   }
 
@@ -210,14 +223,24 @@ async function flushOutboxSW() {
         }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-        const res = await fetch("https://httpbin.org/post", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(networkPayload),
-          signal: controller.signal
-        });
+        let res;
+        try {
+          res = await fetch("/api/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(networkPayload),
+            signal: controller.signal
+          });
+        } catch (_) {
+          res = await fetch("https://httpbin.org/post", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(networkPayload),
+            signal: controller.signal
+          });
+        }
         clearTimeout(timeoutId);
 
         if (res.ok) {

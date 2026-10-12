@@ -48,6 +48,10 @@
   display: none !important;
 }
 
+dialog:not([open]) {
+  display: none !important;
+}
+
 body {
   background-color: var(--bg-page);
   color: var(--text-main);
@@ -63,8 +67,12 @@ body {
 .update-banner {
   background-color: #0f172a;
   color: #ffffff;
-  padding: 0.6rem 1rem;
+  padding: 0.65rem 1rem;
   font-size: 0.85rem;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .update-banner-inner {
@@ -209,14 +217,41 @@ body {
 }
 
 .sync-pill {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   background-color: #fef3c7;
   color: #92400e;
-  padding: 0.15rem 0.45rem;
+  padding: 0.3rem 0.6rem;
   border-radius: 9999px;
   font-weight: 600;
   border: 1px solid #fde68a;
   white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  line-height: 1;
+}
+
+.sync-pill:hover {
+  background-color: #fde68a;
+}
+
+.sync-pill:active {
+  transform: scale(0.94);
+}
+
+.sync-pill.sending {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-color: #bfdbfe;
+  animation: pulseSync 1.2s infinite ease-in-out;
+}
+
+@keyframes pulseSync {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 .btn-icon-nav {
@@ -235,6 +270,7 @@ body {
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+  flex-shrink: 0;
 }
 
 .btn-icon-nav:hover {
@@ -981,6 +1017,71 @@ input:focus, select:focus, textarea:focus {
 
 .contact-actions {
   margin-top: 0.5rem;
+}
+
+/* Modal Notifications & Alertes */
+.notif-status-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.notif-status-indicator {
+  margin-bottom: 0.4rem;
+}
+
+.notif-status-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.notif-actions-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* Pied de page */
+.app-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+  padding: 1.25rem 1rem;
+}
+
+.footer-container {
+  max-width: 1040px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.footer-copy {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.btn-footer-update {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.65rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-footer-update:hover {
+  background: var(--bg-subtle);
+  color: var(--text-main);
 }
 
 /* --------------------------------------------------------------------------

@@ -542,6 +542,8 @@ formAnnonce?.addEventListener("submit", async (e) => {
 // 9. Synchronisation Outbox avec gestion If-Match (Bonus Conflits § 11)
 // ---------------------------------------------------------------------------
 let isFlushingOutbox = false;
+let syncRetryTimeout = null;
+let syncRetryCount = 0;
 
 async function triggerSync() {
   if ("serviceWorker" in navigator && "SyncManager" in window) {
@@ -559,45 +561,70 @@ async function triggerSync() {
   }
 }
 
-async function flushOutbox() {
+async function flushOutbox(isManualTrigger = false) {
   if (isFlushingOutbox) return;
   isFlushingOutbox = true;
+
+  if (syncRetryTimeout) {
+    clearTimeout(syncRetryTimeout);
+    syncRetryTimeout = null;
+  }
+
+  const syncPill = document.querySelector("#sync-status");
 
   try {
     const db = await dbPromise;
     const items = await db.getAll("outbox");
     if (items.length === 0) {
+      syncRetryCount = 0;
       await updateSyncBadge();
       return;
     }
 
-    const syncPill = document.querySelector("#sync-status");
     if (syncPill) {
       syncPill.textContent = `Envoi (${items.length})...`;
+      syncPill.classList.add("sending");
       syncPill.hidden = false;
     }
+
+    let successCount = 0;
 
     for (const item of items) {
       try {
         const version = item.payload?.version || 1;
-        // Créer un payload léger pour la synchronisation réseau (on ne transmet pas des Mo de Base64 à httpbin)
+        // Créer un payload léger pour la synchronisation réseau
         const networkPayload = { ...item.payload };
         if (networkPayload.photo && networkPayload.photo.length > 500) {
           networkPayload.photo = `[photo_data_attached: ${networkPayload.photo.length} bytes]`;
         }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-        const res = await fetch("https://httpbin.org/post", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "If-Match": `"${version}"`
-          },
-          body: JSON.stringify(networkPayload),
-          signal: controller.signal
-        });
+        // Priorité 1 : endpoint local rapide Caddy (/api/sync)
+        // Priorité 2 : repli externe (httpbin.org)
+        let res;
+        try {
+          res = await fetch("/api/sync", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "If-Match": `"${version}"`
+            },
+            body: JSON.stringify(networkPayload),
+            signal: controller.signal
+          });
+        } catch (_) {
+          res = await fetch("https://httpbin.org/post", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "If-Match": `"${version}"`
+            },
+            body: JSON.stringify(networkPayload),
+            signal: controller.signal
+          });
+        }
         clearTimeout(timeoutId);
 
         if (res.status === 412) {
@@ -605,6 +632,7 @@ async function flushOutbox() {
           break;
         } else if (res.ok) {
           await db.delete("outbox", item.id);
+          successCount++;
         } else {
           break;
         }
@@ -613,8 +641,29 @@ async function flushOutbox() {
         break;
       }
     }
+
+    const remainingItems = await db.getAll("outbox");
+    if (remainingItems.length === 0) {
+      syncRetryCount = 0;
+      if (successCount > 0) {
+        showToast("✅ Annonce synchronisée avec succès !");
+      }
+    } else {
+      // Re-tentative avec repli automatique (jusqu'à 3 tentatives)
+      if (navigator.onLine && syncRetryCount < 3) {
+        syncRetryCount++;
+        syncRetryTimeout = setTimeout(() => {
+          flushOutbox();
+        }, 2500 * syncRetryCount);
+      } else if (isManualTrigger) {
+        showToast("⚠️ Connexion indisponible, nouvelle tentative automatique...");
+      }
+    }
   } finally {
     isFlushingOutbox = false;
+    if (syncPill) {
+      syncPill.classList.remove("sending");
+    }
     await updateSyncBadge();
   }
 }
@@ -628,7 +677,7 @@ async function updateSyncBadge() {
   if (remaining === 0) {
     pill.hidden = true;
   } else {
-    pill.textContent = `En attente (${remaining})`;
+    pill.textContent = isFlushingOutbox ? `Envoi (${remaining})...` : `En attente (${remaining})`;
     pill.hidden = false;
   }
 
@@ -640,6 +689,16 @@ async function updateSyncBadge() {
     } catch (_) {}
   }
 }
+
+// Clic interactif sur la pastille pour forcer l'envoi immédiat
+const syncPillBtn = document.querySelector("#sync-status");
+syncPillBtn?.addEventListener("click", async () => {
+  if ("vibrate" in navigator) {
+    try { navigator.vibrate(30); } catch (_) {}
+  }
+  showToast("🔄 Envoi des annonces en attente...");
+  await flushOutbox(true);
+});
 
 // ---------------------------------------------------------------------------
 // 10. Bonus : Réconciliation de Conflits If-Match 412 (Cheatsheet § 11)
@@ -689,54 +748,125 @@ window.simulateConflict = () => {
 // 11. Bonus : Notifications Push / Locales (Cheatsheet § 12)
 // ---------------------------------------------------------------------------
 const btnNotifToggle = document.querySelector("#btn-notif-toggle");
+const modalNotif = document.querySelector("#modal-notif");
+const btnCloseNotif = document.querySelector("#btn-close-notif");
+const notifStatusBadge = document.querySelector("#notif-status-badge");
+const notifStatusDesc = document.querySelector("#notif-status-desc");
+const btnNotifAction = document.querySelector("#btn-notif-action");
+const btnNotifTest = document.querySelector("#btn-notif-test");
+
+function updateNotifModalState() {
+  if (!("Notification" in window)) {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      if (notifStatusBadge) {
+        notifStatusBadge.className = "badge badge-troc";
+        notifStatusBadge.textContent = "📱 Sur iPhone : installation requise";
+      }
+      if (notifStatusDesc) {
+        notifStatusDesc.textContent = "Apple désactive les notifications dans les onglets Safari ordinaires. Pour les autoriser, touchez Partager (carré avec flèche) puis « Sur l'écran d'accueil » et ouvrez l'application.";
+      }
+    } else {
+      if (notifStatusBadge) {
+        notifStatusBadge.className = "badge badge-vente";
+        notifStatusBadge.textContent = "Navigateur non compatible";
+      }
+      if (notifStatusDesc) {
+        notifStatusDesc.textContent = "Ce navigateur ne supporte pas l'API de notifications standard.";
+      }
+    }
+    if (btnNotifAction) btnNotifAction.hidden = true;
+    if (btnNotifTest) btnNotifTest.hidden = true;
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    btnNotifToggle?.classList.add("active");
+    if (notifStatusBadge) {
+      notifStatusBadge.className = "badge badge-don";
+      notifStatusBadge.textContent = "🟢 Alertes campus actives";
+    }
+    if (notifStatusDesc) {
+      notifStatusDesc.textContent = "Vous recevez une notification en temps réel dès qu'une nouvelle annonce ou un don est publié sur le campus.";
+    }
+    if (btnNotifAction) btnNotifAction.hidden = true;
+    if (btnNotifTest) btnNotifTest.hidden = false;
+  } else if (Notification.permission === "denied") {
+    btnNotifToggle?.classList.remove("active");
+    if (notifStatusBadge) {
+      notifStatusBadge.className = "badge badge-vente";
+      notifStatusBadge.textContent = "🔴 Notifications bloquées";
+    }
+    if (notifStatusDesc) {
+      notifStatusDesc.textContent = "Les notifications ont été bloquées dans votre navigateur. Pour les réactiver, touchez le cadenas ou réglages à gauche de l'adresse web et autorisez les notifications.";
+    }
+    if (btnNotifAction) {
+      btnNotifAction.hidden = false;
+      btnNotifAction.disabled = true;
+      btnNotifAction.textContent = "⚠️ Bloqué dans le navigateur";
+    }
+    if (btnNotifTest) btnNotifTest.hidden = true;
+  } else {
+    // "default"
+    btnNotifToggle?.classList.remove("active");
+    if (notifStatusBadge) {
+      notifStatusBadge.className = "badge badge-troc";
+      notifStatusBadge.textContent = "⏳ En attente d'autorisation";
+    }
+    if (notifStatusDesc) {
+      notifStatusDesc.textContent = "Autorisez les notifications pour recevoir les alertes des nouvelles annonces étudiantes.";
+    }
+    if (btnNotifAction) {
+      btnNotifAction.hidden = false;
+      btnNotifAction.disabled = false;
+      btnNotifAction.textContent = "🔔 Activer les alertes campus";
+    }
+    if (btnNotifTest) btnNotifTest.hidden = true;
+  }
+}
 
 if ("Notification" in window && Notification.permission === "granted") {
   btnNotifToggle?.classList.add("active");
   if (btnNotifToggle) btnNotifToggle.title = "Alertes campus actives";
 }
 
-btnNotifToggle?.addEventListener("click", async (e) => {
+// Clic sur la cloche : ouverture immédiate de la modale explicative
+btnNotifToggle?.addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
+  updateNotifModalState();
+  modalNotif?.showModal();
+});
 
-  if (!("Notification" in window)) {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS) {
-      showToast("Sur iPhone, installez d'abord l'app sur l'écran d'accueil pour activer les alertes.");
-    } else {
-      showToast("Notifications non supportées par ce navigateur.");
-    }
-    return;
-  }
+btnCloseNotif?.addEventListener("click", () => {
+  modalNotif?.close();
+});
 
-  if (Notification.permission === "granted") {
-    btnNotifToggle.classList.add("active");
-    await sendSampleNotification();
-    showToast("🔔 Alertes campus actives ! Test envoyé.");
-    return;
-  }
+modalNotif?.addEventListener("click", (e) => {
+  if (e.target === modalNotif) modalNotif.close();
+});
 
-  if (Notification.permission === "denied") {
-    showToast("⚠️ Notifications bloquées dans les réglages de votre navigateur.");
-    return;
-  }
-
-  // Demande de permission avec repli callback pour compatibilité totale mobile
+btnNotifAction?.addEventListener("click", async () => {
+  if (!("Notification" in window)) return;
   let permission;
   try {
     permission = await Notification.requestPermission();
   } catch (_) {
     permission = await new Promise((resolve) => Notification.requestPermission(resolve));
   }
-
+  updateNotifModalState();
   if (permission === "granted") {
-    btnNotifToggle.classList.add("active");
-    btnNotifToggle.title = "Alertes campus actives";
-    await sendSampleNotification();
+    btnNotifToggle?.classList.add("active");
     showToast("🎉 Alertes campus activées !");
-  } else {
-    showToast("⚠️ Permission refusée pour les notifications.");
+    await sendSampleNotification();
+  } else if (permission === "denied") {
+    showToast("⚠️ Notifications bloquées.");
   }
+});
+
+btnNotifTest?.addEventListener("click", async () => {
+  await sendSampleNotification();
+  showToast("📣 Notification de test envoyée !");
 });
 
 async function sendSampleNotification() {
@@ -777,7 +907,11 @@ function updateNetwork() {
   }
 
   if (isOnline) {
-    flushOutbox();
+    showToast("📶 Connexion rétablie : synchronisation en cours...");
+    // Délai de temporisation pour stabilisation de la connexion cellulaire/WiFi
+    setTimeout(() => {
+      flushOutbox();
+    }, 1200);
   } else {
     showToast("Mode hors ligne actif (données en cache)");
   }
@@ -825,7 +959,7 @@ function showUpdateBanner(worker) {
 }
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").then((reg) => {
+  navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((reg) => {
     // 1. Forcer la vérification immédiate auprès du serveur
     reg.update().catch(() => {});
 
@@ -875,6 +1009,31 @@ document.querySelector("#btn-update-apply")?.addEventListener("click", () => {
         window.location.reload();
       }
     });
+  }
+});
+
+// Bouton manuel de vérification de version dans le pied de page
+document.querySelector("#btn-force-check-update")?.addEventListener("click", async () => {
+  if ("serviceWorker" in navigator) {
+    showToast("🔍 Recherche de mises à jour...");
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update();
+        if (reg.waiting) {
+          showUpdateBanner(reg.waiting);
+          showToast("✨ Nouvelle version prête !");
+        } else {
+          showToast("✅ Application à jour.");
+        }
+      } else {
+        window.location.reload();
+      }
+    } catch (err) {
+      showToast(`Erreur mise à jour : ${err.message}`);
+    }
+  } else {
+    window.location.reload();
   }
 });
 

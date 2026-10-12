@@ -2,17 +2,26 @@
     root * /usr/share/caddy
     file_server
 
+    # Endpoint de synchronisation mock local (réponse immédiate 200 OK avec CORS et If-Match)
+    handle /api/sync {
+        header Content-Type application/json
+        header Access-Control-Allow-Origin *
+        header Access-Control-Allow-Methods "POST, OPTIONS, GET"
+        header Access-Control-Allow-Headers "Content-Type, If-Match"
+        respond `{"status":"ok","synced":true}` 200
+    }
+
     # En-têtes pour les fichiers Markdown (Jumelle IA)
     @markdown path *.md
     header @markdown X-Robots-Tag noindex
 
-    # Cache headers pour les assets PWA
-    @static path *.css *.js *.png *.svg *.ico *.json
+    # Cache headers pour les assets statiques immuables (images, favicons)
+    @static path *.png *.svg *.ico *.woff2
     header @static Cache-Control "public, max-age=86400"
 
-    # Ne pas cacher le Service Worker
-    @sw path /sw.js
-    header @sw Cache-Control "no-cache, no-store, must-revalidate"
+    # Fichiers applicatifs clés et Service Worker : aucune mise en cache HTTP
+    @nocache path /sw.js /app.js /style.css /index.html /manifest.json /offline.html
+    header @nocache Cache-Control "no-cache, no-store, must-revalidate"
 
     # Routage statique
     try_files {path} {path}/ /index.html
