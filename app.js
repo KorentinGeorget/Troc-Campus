@@ -669,45 +669,74 @@ window.simulateConflict = () => {
 // ---------------------------------------------------------------------------
 const btnNotifToggle = document.querySelector("#btn-notif-toggle");
 
-btnNotifToggle?.addEventListener("click", async () => {
+if ("Notification" in window && Notification.permission === "granted") {
+  btnNotifToggle?.classList.add("active");
+  if (btnNotifToggle) btnNotifToggle.title = "Alertes campus actives";
+}
+
+btnNotifToggle?.addEventListener("click", async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
   if (!("Notification" in window)) {
-    showToast("Notifications non supportées par ce navigateur.");
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      showToast("Sur iPhone, installez d'abord l'app sur l'écran d'accueil pour activer les alertes.");
+    } else {
+      showToast("Notifications non supportées par ce navigateur.");
+    }
     return;
   }
 
   if (Notification.permission === "granted") {
-    sendSampleNotification();
-    showToast("🔔 Les notifications sont déjà activées.");
+    btnNotifToggle.classList.add("active");
+    await sendSampleNotification();
+    showToast("🔔 Alertes campus actives ! Test envoyé.");
     return;
   }
 
-  const permission = await Notification.requestPermission();
+  if (Notification.permission === "denied") {
+    showToast("⚠️ Notifications bloquées dans les réglages de votre navigateur.");
+    return;
+  }
+
+  // Demande de permission avec repli callback pour compatibilité totale mobile
+  let permission;
+  try {
+    permission = await Notification.requestPermission();
+  } catch (_) {
+    permission = await new Promise((resolve) => Notification.requestPermission(resolve));
+  }
+
   if (permission === "granted") {
-    btnNotifToggle.textContent = "🔔";
-    btnNotifToggle.title = "Alertes activées";
-    sendSampleNotification();
+    btnNotifToggle.classList.add("active");
+    btnNotifToggle.title = "Alertes campus actives";
+    await sendSampleNotification();
     showToast("🎉 Alertes campus activées !");
   } else {
-    showToast("Permission refusée pour les notifications.");
+    showToast("⚠️ Permission refusée pour les notifications.");
   }
 });
 
-function sendSampleNotification() {
-  if (Notification.permission !== "granted") return;
-  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.ready.then(reg => {
-      reg.showNotification("Troc'Campus 🎒", {
+async function sendSampleNotification() {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification("Troc'Campus 🎒", {
         body: "Alertes campus actives : vous serez notifié dès qu'un don est publié !",
         icon: "/icons/icon-192.png",
         badge: "/icons/favicon.png",
         tag: "troc-welcome"
       });
-    });
-  } else {
-    new Notification("Troc'Campus 🎒", {
-      body: "Alertes campus actives : vous serez notifié dès qu'un don est publié !",
-      icon: "/icons/icon-192.png"
-    });
+    } else {
+      new Notification("Troc'Campus 🎒", {
+        body: "Alertes campus actives : vous serez notifié dès qu'un don est publié !",
+        icon: "/icons/icon-192.png"
+      });
+    }
+  } catch (err) {
+    console.error("Erreur émission notification:", err);
   }
 }
 

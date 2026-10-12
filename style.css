@@ -223,17 +223,32 @@ body {
   background: var(--bg-subtle);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.4rem 0.55rem;
-  font-size: 0.95rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem;
+  font-size: 1.25rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .btn-icon-nav:hover {
   background-color: #e2e8f0;
+}
+
+.btn-icon-nav:active {
+  transform: scale(0.92);
+  background-color: #cbd5e1;
+}
+
+.btn-icon-nav.active {
+  background-color: var(--primary-light);
+  border-color: var(--primary);
 }
 
 .btn-install {
@@ -973,7 +988,7 @@ input:focus, select:focus, textarea:focus {
    -------------------------------------------------------------------------- */
 .toast-container {
   position: fixed;
-  bottom: 1.25rem;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   right: 1.25rem;
   left: 1.25rem;
   max-width: 380px;
