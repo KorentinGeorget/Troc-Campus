@@ -10,21 +10,21 @@
   --border-focus: #059669;
 
   --text-main: #0f172a;
-  --text-muted: #475569;
-  --text-subtle: #94a3b8;
+  --text-muted: #334155;
+  --text-subtle: #475569;
 
-  --primary: #059669;
-  --primary-hover: #047857;
+  --primary: #047857;
+  --primary-hover: #065f46;
   --primary-light: #ecfdf5;
 
   --badge-don-bg: #dcfce7;
-  --badge-don-text: #15803d;
+  --badge-don-text: #166534;
   --badge-vente-bg: #dbeafe;
-  --badge-vente-text: #1d4ed8;
+  --badge-vente-text: #1e40af;
   --badge-troc-bg: #fef3c7;
-  --badge-troc-text: #b45309;
+  --badge-troc-text: #92400e;
 
-  --danger: #dc2626;
+  --danger: #b91c1c;
   --danger-bg: #fee2e2;
 
   --radius-sm: 8px;
@@ -73,11 +73,11 @@ body {
 }
 
 .conflict-banner {
-  background: linear-gradient(90deg, #d97706, #b45309);
+  background: linear-gradient(90deg, #b45309, #92400e);
   color: #ffffff;
   padding: 0.75rem 1rem;
   font-size: 0.85rem;
-  box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(146, 64, 14, 0.25);
 }
 
 .conflict-banner-inner {
@@ -191,11 +191,11 @@ body {
 }
 
 .status-indicator.off .status-dot {
-  background-color: #ef4444;
+  background-color: var(--danger);
 }
 
 .status-indicator.off .status-text {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 .header-right {
@@ -498,7 +498,7 @@ body {
 }
 
 .price-free { color: var(--primary); }
-.price-troc { color: #b45309; }
+.price-troc { color: var(--badge-troc-text); }
 
 .ad-title {
   font-size: 0.98rem;

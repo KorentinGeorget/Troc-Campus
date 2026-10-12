@@ -77,15 +77,15 @@
 <body>
 
   <!-- Bandeau de mise à jour SW discrète -->
-  <aside id="update-banner" class="update-banner" role="alert" hidden>
+  <div id="update-banner" class="update-banner" role="alert" hidden>
     <div class="update-banner-inner">
       <span>✨ Une nouvelle version est prête !</span>
       <button type="button" id="btn-update-apply" class="btn btn-sm btn-light">Mettre à jour</button>
     </div>
-  </aside>
+  </div>
 
   <!-- Bannière Bonus : Conflit de synchronisation If-Match 412 (Cheatsheet § 11) -->
-  <aside id="conflict-banner" class="conflict-banner" role="alert" hidden>
+  <div id="conflict-banner" class="conflict-banner" role="alert" hidden>
     <div class="conflict-banner-inner">
       <div class="conflict-text">
         <strong>⚠️ Conflit de version détecté (HTTP 412)</strong>
@@ -96,7 +96,7 @@
         <button type="button" id="btn-conflict-theirs" class="btn btn-sm btn-ghost-white">Prendre la leur</button>
       </div>
     </div>
-  </aside>
+  </div>
 
   <!-- En-tête de navigation -->
   <header class="app-header">
