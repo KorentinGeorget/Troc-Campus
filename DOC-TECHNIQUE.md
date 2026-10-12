@@ -15,18 +15,14 @@ Troc'Campus est une Progressive Web App permettant aux étudiants de donner, ven
 ### Problème et sujet
 Sur les campus universitaires (notamment les campus Mariani et Grimaldi de l'Università di Corsica), les étudiants accumulent en début et fin de semestre des livres de cours, du matériel de travaux pratiques et des équipements de logement étudiant dont d'autres ont besoin. Les plateformes existantes imposent des commissions ou des comptes lourds et ne fonctionnent pas dans les zones blanches ou les sous-sols des bâtiments universitaires. Troc'Campus répond au sujet officiel du Hub : **« Troc'Campus : vendre, donner, échanger »**.
 
-### Goals (v1)
+### Périmètre fonctionnel
 - Consulter instantanément le catalogue des annonces en mode avion grâce au cache App Shell et à IndexedDB.
-- Déposer une annonce hors ligne avec photo prise via la caméra ou le système de fichiers, avec enregistrement immédiat dans une file d'attente Outbox.
+- Déposer une annonce hors ligne avec photo prise via la caméra ou le sélecteur de fichiers, avec enregistrement immédiat dans l'Outbox.
 - Synchroniser automatiquement l'Outbox au retour du réseau via Background Sync (Chromium) ou le repli universel d'écoute `online`.
 - Permettre l'installation sur écran d'accueil avec Web App Manifest valide (icônes 192/512, mode `standalone`).
 - Rendre le contenu public lisible en HTML brut par les crawlers (`curl`, GPTBot, ClaudeBot), avec `robots.txt`, `sitemap.xml`, `llms.txt`, JSON-LD et jumelle Markdown `annonces.md`.
-- Exploiter les capacités de l'appareil : caméra (capture photo), Web Share API (partage d'annonce) et Web Share Target (réception de photo depuis la galerie).
-
-### Non-goals (volontairement exclus de la v1)
-- Paiement bancaire en ligne (le troc et la remise s'effectuent de main à main sur le campus).
-- Authentification lourde obligatoire pour la consultation (le contenu public reste universellement accessible).
-- Chat temps réel WebSocket (les étudiants se contactent par email ou messagerie directe indiquée sur l'annonce).
+- Exploiter les capacités de l'appareil : caméra (capture photo), Web Share API (partage), Web Share Target, presse-papiers, app badge et vibration.
+- Architecture d'échange direct entre étudiants sur le campus, sans intermédiaire bancaire ni serveur de chat lourd.
 
 ---
 
@@ -47,7 +43,7 @@ Sur les campus universitaires (notamment les campus Mariani et Grimaldi de l'Uni
 │  ┌───────────────────────┐            ┌─────────────────────────────┐  │
 │  │   Page Web (app.js)   │            │   Service Worker (sw.js)    │  │
 │  │                       │            │                             │  │
-│  │ - Rendu DOM sécurisé  │            │ - Cycle de vie (v1)         │  │
+│  │ - Rendu DOM sécurisé  │            │ - Cycle de vie (SW)         │  │
 │  │ - getUserMedia Caméra │            │ - Interception fetch        │  │
 │  │ - Web Share API       │            │ - SyncManager 'sync-outbox' │  │
 │  │ - Repli window.online │            │ - Share Target (POST)       │  │
@@ -62,7 +58,7 @@ Sur les campus universitaires (notamment les campus Mariani et Grimaldi de l'Uni
 │             │                                        │                 │
 │             ▼                                        ▼                 │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                   Cache API ("troc-campus-v1")                   │  │
+│  │                     Cache API (App Shell)                        │  │
 │  │  App Shell : index.html, style.css, app.js, offline.html,        │  │
 │  │              manifest.json, annonces.md, idb v8, icônes...       │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
@@ -93,7 +89,7 @@ L'application est déployée sur un VPS personnel géré via **Coolify**.
 
 | Ressource | Stratégie | Stockage | Pourquoi |
 |---|---|---|---|
-| **App Shell** (`/`, `/index.html`, `/style.css`, `/app.js`, `idb`) | **Cache First** | Cache API (`troc-campus-v1`) | Chargement instantané même sans réseau ; garantit l'ouverture de l'application en mode avion. |
+| **App Shell** (`/`, `/index.html`, `/style.css`, `/app.js`, `idb`) | **Cache First** | Cache API | Chargement instantané même sans réseau ; garantit l'ouverture de l'application en mode avion. |
 | **Page de secours** (`/offline.html`) | **Cache First** (pré-mise en cache) | Cache API | Présente une interface explicative soignée lors d'une navigation vers une URL non mise en cache. |
 | **Icônes & Manifest** (`manifest.json`, PNG 192/512) | **Cache First** | Cache API | Ressources immuables requises pour l'identité graphique et l'installation de la PWA. |
 | **Jumelle IA** (`/annonces.md`) | **Cache First** | Cache API | Permet la consultation textuelle hors ligne. |
@@ -118,20 +114,20 @@ Plutôt que d'appliquer la mise à jour d'office de manière transparente via un
 Dans une application où l'utilisateur rédige des annonces détaillées et capture des photos sur son mobile, recharger silencieusement la page ou écraser le Service Worker en cours d'utilisation risquerait d'interrompre une saisie active ou de vider un formulaire. La notification visuelle respecte l'action en cours de l'étudiant.
 
 ### Mécanisme technique
-1. Le cache du Service Worker est versionné sous `CACHE_NAME = "troc-campus-v1"`.
-2. Lors d'un nouveau déploiement modifiant `sw.js` (ex. passage en `v2`), le navigateur détecte la différence octet par octet et déclenche l'événement `updatefound` sur l'objet `registration`.
+1. Le cache du Service Worker est versionné sous une constante (ex. `CACHE_NAME = "troc-campus-v4"`).
+2. Lors d'un déploiement modifiant `sw.js`, le navigateur détecte la différence octet par octet et déclenche l'événement `updatefound` sur l'objet `registration`.
 3. Le nouveau Service Worker entre dans l'état `installing`, télécharge l'App Shell dans son nouveau cache, puis passe à l'état `installed`.
 4. La page détecte `newWorker.state === 'installed'` alors qu'un contrôleur actif existe déjà : elle affiche la bannière `#update-banner`.
 5. Au clic sur « Mettre à jour maintenant », la page envoie `newWorker.postMessage({ type: "SKIP_WAITING" })`.
 6. Le nouveau Service Worker exécute `self.skipWaiting()`, ce qui déclenche l'événement `activate`.
-7. Dans l'`activate`, l'ancien cache `troc-campus-v1` est supprimé par `caches.delete()`, puis `self.clients.claim()` prend la main.
+7. Dans l'`activate`, les anciens caches obsolètes sont supprimés par `caches.delete()`, puis `self.clients.claim()` prend la main.
 8. La page écoute l'événement `navigator.serviceWorker.addEventListener("controllerchange")` et déclenche `window.location.reload()`, chargeant instantanément la nouvelle version sans intervention manuelle de vidage de cache.
 
 ---
 
 ## 6. Données et synchronisation
 
-### Modèle de données IndexedDB (`troc-campus-db`, version 1)
+### Modèle de données IndexedDB (`troc-campus-db`)
 - **Store `annonces` :**
   - Clé primaire : `id` (`autoIncrement: true`).
   - Champs : `title` (string), `type` ('don' | 'vente' | 'troc'), `price` (number), `campus` (string), `contact` (string), `description` (string), `photo` (string DataURL ou null), `isSeed` (boolean), `createdAt` (timestamp).
@@ -222,11 +218,7 @@ curl -sI http://localhost:3000/llms.txt | head -1
 
 ---
 
-## 12. Limites connues et suite (v2)
+## 12. Limites connues
 
-- **Limitations actuelles :**
-  - L'API `Background Sync` est exclusive aux navigateurs dérivés de Chromium (Chrome, Edge) ; sous iOS Safari et Firefox, la synchronisation s'appuie sur le repli robuste de l'événement `online`.
-  - La réception de fichiers par Web Share Target nécessite l'installation préalable de l'application sur le système d'exploitation hôte (Android).
-- **Pistes pour la v2 :**
-  - Généralisation de la gestion des conflits à un backend centralisé multi-utilisateurs en temps réel (la v1 implémentant déjà la négociation `If-Match: "<version>"` avec arbitrage visuel 412).
-  - Connexion des notifications Push distantes via Firebase Cloud Messaging (FCM) lors du portage natif Android (Partie II du cours en novembre).
+- **Support de Background Sync :** L'API `Background Sync` (`SyncManager`) est exclusive aux navigateurs dérivés de Chromium (Chrome, Edge). Sous iOS Safari et Firefox, la synchronisation s'appuie de manière transparente sur le repli robuste de l'événement `window.online`.
+- **Réception Web Share Target :** La réception directe d'images partagées depuis la galerie photo du système nécessite que la PWA soit préalablement installée sur l'appareil (Android). Sur navigateur de bureau, le formulaire propose directement le sélecteur de fichiers et la capture caméra.

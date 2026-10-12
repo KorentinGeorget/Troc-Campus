@@ -10,7 +10,7 @@ Projet conçu dans le cadre du cours de Progressive Web Apps (Master 2 Informati
 
 ## ✨ Fonctionnalités clés
 
-- **100% Fonctionnelle hors ligne** : App Shell mis en cache par le Service Worker (`troc-campus-v2`), stockage local IndexedDB (`idb` v8) et page de secours dédiée `offline.html`.
+- **100% Fonctionnelle hors ligne** : App Shell mis en cache par le Service Worker (Cache API), stockage local IndexedDB (`idb` v8) et page de secours dédiée `offline.html`.
 - **Installable** : Web App Manifest standalone (icônes 192x192, 512x512 et maskable) avec capture de `beforeinstallprompt`.
 - **Synchronisation au retour du réseau** : File d'attente Outbox dans IndexedDB, vidage automatique via Background Sync (`sync-outbox`) ou repli universel `online` vers `https://httpbin.org/post`.
 - **Visibilité moteurs de recherche & agents IA** : Contenu public pré-rendu dans le HTML initial (`data-seed`) lisible par `curl`, fichiers `robots.txt` (décisions motivées pour GPTBot, ClaudeBot, Google-Extended), `sitemap.xml`, `llms.txt`, jumelle Markdown `annonces.md` et données structurées Schema.org JSON-LD.
