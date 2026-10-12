@@ -10,6 +10,7 @@
   <!-- PWA & Mobile Web App -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icons/favicon.png">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="TrocCampus">
@@ -75,24 +76,24 @@
 </head>
 <body>
 
-  <!-- Barre de mise à jour discrète -->
-  <div id="update-banner" class="update-banner" role="alert" hidden>
+  <!-- Bandeau de mise à jour discrète -->
+  <aside id="update-banner" class="update-banner" role="alert" hidden>
     <div class="update-banner-inner">
       <span>Une nouvelle version est disponible.</span>
-      <button type="button" id="btn-update-apply" class="btn btn-sm btn-primary">Mettre à jour</button>
+      <button type="button" id="btn-update-apply" class="btn btn-sm btn-light">Mettre à jour</button>
     </div>
-  </div>
+  </aside>
 
-  <!-- En-tête de navigation -->
+  <!-- En-tête -->
   <header class="app-header">
     <div class="header-container">
       <a href="/" class="brand">
-        <img src="icons/icon-192.png" alt="" class="brand-logo" width="32" height="32">
+        <img src="icons/icon-192.png" alt="" class="brand-logo" width="34" height="34">
         <span class="brand-name">Troc'Campus</span>
       </a>
 
       <div class="header-status">
-        <div class="network-indicator" id="network-status" title="État de la connexion">
+        <div class="status-indicator" id="network-status" title="État de la connexion">
           <span class="status-dot"></span>
           <span class="status-text" id="network-text">En ligne</span>
         </div>
@@ -100,17 +101,18 @@
       </div>
 
       <div class="header-actions">
-        <button type="button" id="btn-install" class="btn btn-sm btn-outline" hidden>Installer</button>
+        <button type="button" id="btn-install" class="btn btn-sm btn-ghost" hidden>📲 Installer</button>
         <button type="button" id="btn-open-form" class="btn btn-primary">+ Déposer une annonce</button>
       </div>
     </div>
   </header>
 
   <main class="app-main">
-    <!-- Barre de contrôle : Filtres et compteur -->
+    <!-- Barre de contrôle : Titre et Filtres -->
     <section class="toolbar" aria-label="Filtres des annonces">
       <div class="toolbar-left">
-        <h1 class="page-title">Annonces récentes (<span id="ad-count">3</span>)</h1>
+        <h1 class="page-title">Annonces sur le campus (<span id="ad-count">3</span>)</h1>
+        <p class="page-subtitle">Dons, ventes et trocs entre étudiants · Accessible hors ligne</p>
       </div>
       <div class="toolbar-right">
         <nav class="filter-tabs" aria-label="Filtrer par catégorie">
@@ -122,71 +124,74 @@
       </div>
     </section>
 
-    <!-- Grille des annonces (Contenu public dans le HTML initial pour SEO/curl) -->
+    <!-- Grille des annonces (Contenu public dans le HTML initial pour validation curl/SEO) -->
     <section aria-label="Liste des annonces">
       <ul id="annonces-list" class="ads-grid">
         <!-- 3 annonces publiques data-seed initiales -->
-        <li class="ad-card" data-seed data-id="seed-1" data-type="don" data-price="0" data-campus="Campus Grimaldi, Corte">
+        <li class="ad-card" data-seed data-id="seed-1" data-type="don" data-price="0" data-campus="Campus Grimaldi, Corte" data-contact="contact-grimaldi@univ-corse.fr">
           <article class="ad-content">
-            <div class="ad-thumb">
-              <span class="thumb-icon" aria-hidden="true">📖</span>
+            <div class="ad-thumb thumb-don">
+              <span class="thumb-icon" aria-hidden="true">📚</span>
             </div>
             <div class="ad-details">
               <div class="ad-top">
-                <span class="tag tag-don">Don</span>
-                <span class="ad-price">Gratuit</span>
+                <span class="badge badge-don">Don</span>
+                <span class="ad-price price-free">Gratuit</span>
               </div>
               <h2 class="ad-title">Livre Réseaux & Télécoms (Tanenbaum 5e éd.)</h2>
               <p class="ad-desc">Manuel en très bon état avec schémas, idéal pour étudiant en Licence ou Master Informatique. À récupérer au bâtiment pédagogique.</p>
               <div class="ad-meta">
-                <span class="ad-location">Campus Grimaldi, Corte</span>
-                <div class="ad-actions">
-                  <button type="button" class="btn-icon btn-share" data-title="Livre Réseaux & Télécoms" data-text="Livre Tanenbaum en don à Grimaldi" title="Partager l'annonce">Partager</button>
-                </div>
+                <span class="ad-location">📍 Campus Grimaldi, Corte</span>
+              </div>
+              <div class="ad-actions">
+                <button type="button" class="btn-card btn-card-contact" data-action="contact">Contacter</button>
+                <button type="button" class="btn-card btn-card-share" data-action="share">Partager</button>
               </div>
             </div>
           </article>
         </li>
 
-        <li class="ad-card" data-seed data-id="seed-2" data-type="vente" data-price="35" data-campus="Campus Mariani, Corte">
+        <li class="ad-card" data-seed data-id="seed-2" data-type="vente" data-price="35" data-campus="Campus Mariani, Corte" data-contact="mathieu.mariani@univ-corse.fr">
           <article class="ad-content">
-            <div class="ad-thumb">
-              <span class="thumb-icon" aria-hidden="true">📐</span>
+            <div class="ad-thumb thumb-vente">
+              <span class="thumb-icon" aria-hidden="true">🧮</span>
             </div>
             <div class="ad-details">
               <div class="ad-top">
-                <span class="tag tag-vente">Vente</span>
+                <span class="badge badge-vente">Vente</span>
                 <span class="ad-price">35 €</span>
               </div>
               <h2 class="ad-title">Calculatrice graphique TI-84 Plus CE</h2>
               <p class="ad-desc">Batterie rechargeable neuve, avec câble USB et coque de protection. Parfait pour les examens et modules de maths/physique.</p>
               <div class="ad-meta">
-                <span class="ad-location">Campus Mariani, Corte</span>
-                <div class="ad-actions">
-                  <button type="button" class="btn-icon btn-share" data-title="Calculatrice TI-84" data-text="TI-84 Plus CE à vendre 35 €" title="Partager l'annonce">Partager</button>
-                </div>
+                <span class="ad-location">📍 Campus Mariani, Corte</span>
+              </div>
+              <div class="ad-actions">
+                <button type="button" class="btn-card btn-card-contact" data-action="contact">Contacter</button>
+                <button type="button" class="btn-card btn-card-share" data-action="share">Partager</button>
               </div>
             </div>
           </article>
         </li>
 
-        <li class="ad-card" data-seed data-id="seed-3" data-type="troc" data-price="0" data-campus="Résidence Grossetti, Corte">
+        <li class="ad-card" data-seed data-id="seed-3" data-type="troc" data-price="0" data-campus="Résidence Grossetti, Corte" data-contact="lea.grossetti@univ-corse.fr">
           <article class="ad-content">
-            <div class="ad-thumb">
+            <div class="ad-thumb thumb-troc">
               <span class="thumb-icon" aria-hidden="true">🪑</span>
             </div>
             <div class="ad-details">
               <div class="ad-top">
-                <span class="tag tag-troc">Troc</span>
-                <span class="ad-price">Échange</span>
+                <span class="badge badge-troc">Troc</span>
+                <span class="ad-price price-troc">Échange</span>
               </div>
               <h2 class="ad-title">Bureau compact pliable pour chambre CROUS</h2>
               <p class="ad-desc">Échange bureau compact en bois clair contre chaise de bureau ergonomique ou petite étagère de rangement.</p>
               <div class="ad-meta">
-                <span class="ad-location">Résidence Grossetti, Corte</span>
-                <div class="ad-actions">
-                  <button type="button" class="btn-icon btn-share" data-title="Bureau compact pliable" data-text="Bureau en troc à Grossetti" title="Partager l'annonce">Partager</button>
-                </div>
+                <span class="ad-location">📍 Résidence Grossetti, Corte</span>
+              </div>
+              <div class="ad-actions">
+                <button type="button" class="btn-card btn-card-contact" data-action="contact">Contacter</button>
+                <button type="button" class="btn-card btn-card-share" data-action="share">Partager</button>
               </div>
             </div>
           </article>
@@ -195,38 +200,41 @@
     </section>
   </main>
 
-  <!-- Modal : Déposer une annonce -->
+  <!-- Modal 1 : Déposer une annonce -->
   <dialog id="modal-form" class="modal">
-    <div class="modal-box">
+    <div class="modal-card">
       <div class="modal-header">
-        <h2 class="modal-title">Déposer une annonce</h2>
-        <button type="button" id="btn-close-form" class="btn-close" aria-label="Fermer la boîte de dialogue">✕</button>
+        <div>
+          <h2 class="modal-title">Déposer une annonce</h2>
+          <p class="modal-subtitle">Visible par les étudiants du campus et accessible hors ligne</p>
+        </div>
+        <button type="button" id="btn-close-form" class="btn-icon-close" aria-label="Fermer">✕</button>
       </div>
 
       <form id="form-annonce" autocomplete="off" class="modal-body">
-        <div class="field">
-          <label for="ad-title">Titre *</label>
-          <input type="text" id="ad-title" placeholder="Ex : Manuel de Droit L1" required>
+        <div class="form-row">
+          <label for="ad-title">Titre de l'annonce *</label>
+          <input type="text" id="ad-title" placeholder="Ex : Manuel d'Algèbre L2, Écran 24 pouces..." required>
         </div>
 
-        <div class="field-row">
-          <div class="field">
-            <label for="ad-type">Type *</label>
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label for="ad-type">Type d'échange *</label>
             <select id="ad-type" required>
-              <option value="don">Don (gratuit)</option>
-              <option value="vente">Vente</option>
-              <option value="troc">Troc / Échange</option>
+              <option value="don">🎁 Don (gratuit)</option>
+              <option value="vente">💶 Vente</option>
+              <option value="troc">🔄 Troc / Échange</option>
             </select>
           </div>
-          <div class="field" id="field-price" hidden>
-            <label for="ad-price">Prix (€)</label>
-            <input type="number" id="ad-price" min="0" step="1" placeholder="0">
+          <div class="form-row" id="field-price" hidden>
+            <label for="ad-price">Prix souhaité (€)</label>
+            <input type="number" id="ad-price" min="0" step="1" placeholder="Ex : 20">
           </div>
         </div>
 
-        <div class="field-row">
-          <div class="field">
-            <label for="ad-campus">Lieu de remise *</label>
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label for="ad-campus">Lieu de remise sur le campus *</label>
             <select id="ad-campus" required>
               <option value="Campus Mariani, Corte">Campus Mariani, Corte</option>
               <option value="Campus Grimaldi, Corte">Campus Grimaldi, Corte</option>
@@ -236,58 +244,90 @@
               <option value="Campus Ajaccio">Campus Ajaccio</option>
             </select>
           </div>
-          <div class="field">
-            <label for="ad-contact">Contact (email / téléphone) *</label>
-            <input type="text" id="ad-contact" placeholder="votre.nom@univ-corse.fr" required>
+          <div class="form-row">
+            <label for="ad-contact">Contact (email ou téléphone) *</label>
+            <input type="text" id="ad-contact" placeholder="etudiant@univ-corse.fr" required>
           </div>
         </div>
 
-        <div class="field">
-          <label for="ad-desc">Description *</label>
-          <textarea id="ad-desc" rows="3" placeholder="État du produit, conditions de remise..." required></textarea>
+        <div class="form-row">
+          <label for="ad-desc">Description détaillée *</label>
+          <textarea id="ad-desc" rows="3" placeholder="État du matériel, matière concernée, disponibilités pour la remise..." required></textarea>
         </div>
 
-        <!-- Section Photo / Caméra -->
-        <div class="field">
-          <label>Photo de l'objet</label>
-          <div class="camera-panel">
+        <!-- Section Caméra & Photo -->
+        <div class="form-row">
+          <label>Photo de l'objet (optionnelle)</label>
+          <div class="camera-card">
             <div class="camera-actions">
-              <button type="button" id="btn-camera" class="btn btn-sm btn-outline">Prendre une photo (caméra)</button>
-              <label for="photo-file" class="btn btn-sm btn-outline" style="cursor: pointer;">Choisir un fichier</label>
+              <button type="button" id="btn-camera" class="btn btn-sm btn-camera">📷 Ouvrir la caméra</button>
+              <label for="photo-file" class="btn btn-sm btn-ghost" style="cursor: pointer;">📁 Choisir une image</label>
               <input type="file" id="photo-file" accept="image/*" capture="environment" hidden>
             </div>
 
-            <!-- Message d'erreur clair si la permission est refusée -->
-            <div id="camera-error" class="alert-error" hidden></div>
+            <!-- Message d'erreur caméra si permission refusée -->
+            <div id="camera-error" class="alert-box" hidden></div>
 
-            <!-- Zone de capture vidéo -->
-            <div id="video-wrapper" class="video-container" hidden>
+            <!-- Flux vidéo caméra en direct -->
+            <div id="video-wrapper" class="video-preview-wrapper" hidden>
               <video id="camera-video" playsinline autoplay muted></video>
-              <div class="video-controls">
-                <button type="button" id="btn-capture" class="btn btn-sm btn-primary">Capturer la photo</button>
-                <button type="button" id="btn-camera-close" class="btn btn-sm btn-outline">Annuler</button>
+              <div class="video-overlay">
+                <button type="button" id="btn-capture" class="btn btn-sm btn-primary">Capturer</button>
+                <button type="button" id="btn-camera-close" class="btn btn-sm btn-ghost">Fermer</button>
               </div>
             </div>
 
             <canvas id="camera-canvas" hidden></canvas>
 
-            <!-- Prévisualisation de l'image capturée -->
-            <div id="photo-preview-box" class="preview-container" hidden>
+            <!-- Aperçu de la photo capturée/choisie -->
+            <div id="photo-preview-box" class="photo-preview-card" hidden>
               <img id="photo-preview-img" alt="Aperçu photo">
-              <button type="button" id="btn-photo-remove" class="btn btn-sm btn-danger">Supprimer la photo</button>
+              <div class="photo-preview-info">
+                <span>Photo prête</span>
+                <button type="button" id="btn-photo-remove" class="btn-text-danger">Supprimer la photo</button>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="modal-footer">
-          <button type="button" id="btn-cancel-form" class="btn btn-outline">Annuler</button>
-          <button type="submit" class="btn btn-primary">Publier l'annonce</button>
+          <button type="button" id="btn-cancel-form" class="btn btn-ghost">Annuler</button>
+          <button type="submit" id="btn-submit-form" class="btn btn-primary">Publier l'annonce</button>
         </div>
       </form>
     </div>
   </dialog>
 
-  <!-- Système de toasts éphémères -->
+  <!-- Modal 2 : Contacter l'étudiant -->
+  <dialog id="modal-contact" class="modal">
+    <div class="modal-card modal-card-sm">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Contacter pour l'annonce</h2>
+          <p class="modal-subtitle" id="contact-ad-title">Titre de l'annonce</p>
+        </div>
+        <button type="button" id="btn-close-contact" class="btn-icon-close" aria-label="Fermer">✕</button>
+      </div>
+      <div class="modal-body contact-modal-body">
+        <div class="contact-info-box">
+          <span class="contact-label">Lieu de remise :</span>
+          <strong id="contact-ad-campus">Campus</strong>
+        </div>
+        <div class="contact-info-box">
+          <span class="contact-label">Coordonnées de l'étudiant :</span>
+          <div class="contact-value-row">
+            <input type="text" id="contact-input-val" readonly class="contact-input">
+            <button type="button" id="btn-copy-contact" class="btn btn-sm btn-primary">Copier</button>
+          </div>
+        </div>
+        <div class="contact-actions">
+          <a id="btn-email-link" href="#" class="btn btn-outline" style="text-decoration: none; width: 100%; text-align: center;">Ouvrir l'application de messagerie</a>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Système de Toasts -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <script src="app.js" type="module"></script>

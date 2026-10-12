@@ -2,7 +2,7 @@
 // IndexedDB, Outbox, Background Sync, Caméra (getUserMedia) et Web Share
 
 // ---------------------------------------------------------------------------
-// 1. Notifications Toast légères et console
+// 1. Fonctions utilitaires : Toasts, Copie Presse-papiers et Logs
 // ---------------------------------------------------------------------------
 function showToast(message) {
   const container = document.querySelector("#toast-container");
@@ -13,9 +13,32 @@ function showToast(message) {
   container.append(toast);
   setTimeout(() => {
     toast.style.opacity = "0";
-    toast.style.transition = "opacity 0.2s";
+    toast.style.transition = "opacity 0.2s ease";
     setTimeout(() => toast.remove(), 200);
   }, 3200);
+}
+
+async function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {}
+  }
+  try {
+    const input = document.createElement("textarea");
+    input.value = text;
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    document.body.appendChild(input);
+    input.focus();
+    input.select();
+    const success = document.execCommand("copy");
+    input.remove();
+    return success;
+  } catch {
+    return false;
+  }
 }
 
 function log(msg, category = "app") {
@@ -23,7 +46,7 @@ function log(msg, category = "app") {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Base de données locale IndexedDB
+// 2. Base de données locale IndexedDB (Bibliothèque idb)
 // ---------------------------------------------------------------------------
 const dbPromise = window.idb.openDB("troc-campus-db", 1, {
   upgrade(db) {
@@ -40,7 +63,7 @@ const dbPromise = window.idb.openDB("troc-campus-db", 1, {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Hydratation initiale depuis le HTML public (Critère curl / SEO)
+// 3. Hydratation initiale depuis le HTML public (Critère curl/SEO)
 // ---------------------------------------------------------------------------
 async function initHydration() {
   const db = await dbPromise;
@@ -54,9 +77,10 @@ async function initHydration() {
     for (const card of seedCards) {
       const title = card.querySelector(".ad-title")?.textContent.trim() || "Annonce";
       const desc = card.querySelector(".ad-desc")?.textContent.trim() || "";
-      const campus = card.querySelector(".ad-location")?.textContent.trim() || "Campus Mariani, Corte";
+      const campus = card.querySelector(".ad-location")?.textContent.replace("📍", "").trim() || "Campus Mariani, Corte";
       const type = card.dataset.type || "don";
       const price = Number(card.dataset.price) || 0;
+      const contact = card.dataset.contact || "contact@univ-corse.fr";
       const placeholder = card.querySelector(".thumb-icon")?.textContent.trim() || "📦";
 
       await db.add("annonces", {
@@ -64,7 +88,7 @@ async function initHydration() {
         type,
         price,
         campus,
-        contact: "contact@univ-corse.fr",
+        contact,
         description: desc,
         placeholder,
         photo: null,
@@ -103,13 +127,18 @@ async function renderAnnonces() {
       const li = document.createElement("li");
       li.className = "ad-card";
       li.dataset.id = ad.id;
+      li.dataset.type = ad.type;
+      li.dataset.contact = ad.contact;
+      li.dataset.campus = ad.campus;
+      li.dataset.title = ad.title;
+      li.dataset.desc = ad.description;
 
       const article = document.createElement("article");
       article.className = "ad-content";
 
       // Miniature photo
       const thumb = document.createElement("div");
-      thumb.className = "ad-thumb";
+      thumb.className = `ad-thumb thumb-${ad.type}`;
       if (ad.photo) {
         const img = document.createElement("img");
         img.src = ad.photo;
@@ -119,7 +148,7 @@ async function renderAnnonces() {
       } else {
         const icon = document.createElement("span");
         icon.className = "thumb-icon";
-        icon.textContent = ad.placeholder || (ad.type === "don" ? "🎁" : ad.type === "vente" ? "💶" : "🔄");
+        icon.textContent = ad.placeholder || (ad.type === "don" ? "📚" : ad.type === "vente" ? "🧮" : "🪑");
         thumb.append(icon);
       }
 
@@ -131,11 +160,11 @@ async function renderAnnonces() {
       top.className = "ad-top";
 
       const tag = document.createElement("span");
-      tag.className = `tag tag-${ad.type}`;
+      tag.className = `badge badge-${ad.type}`;
       tag.textContent = ad.type === "don" ? "Don" : ad.type === "vente" ? "Vente" : "Troc";
 
       const price = document.createElement("span");
-      price.className = "ad-price";
+      price.className = `ad-price ${ad.type === "don" ? "price-free" : ad.type === "troc" ? "price-troc" : ""}`;
       price.textContent = ad.type === "vente" ? `${ad.price} €` : (ad.type === "don" ? "Gratuit" : "Échange");
 
       top.append(tag, price);
@@ -153,35 +182,39 @@ async function renderAnnonces() {
 
       const loc = document.createElement("span");
       loc.className = "ad-location";
-      loc.textContent = ad.campus;
+      loc.textContent = `📍 ${ad.campus}`;
+      meta.append(loc);
 
       const actions = document.createElement("div");
       actions.className = "ad-actions";
 
-      // Capacité : Web Share API
+      // Bouton contacter
+      const btnContact = document.createElement("button");
+      btnContact.type = "button";
+      btnContact.className = "btn-card btn-card-contact";
+      btnContact.dataset.action = "contact";
+      btnContact.textContent = "Contacter";
+
+      // Bouton partager
       const btnShare = document.createElement("button");
       btnShare.type = "button";
-      btnShare.className = "btn-icon";
+      btnShare.className = "btn-card btn-card-share";
+      btnShare.dataset.action = "share";
       btnShare.textContent = "Partager";
-      btnShare.title = "Partager cette annonce";
-      btnShare.addEventListener("click", () => shareAd(ad));
-      actions.append(btnShare);
 
+      actions.append(btnContact, btnShare);
+
+      // Bouton supprimer si annonce locale
       if (!ad.isSeed) {
         const btnDelete = document.createElement("button");
         btnDelete.type = "button";
-        btnDelete.className = "btn-icon";
-        btnDelete.style.color = "var(--danger)";
+        btnDelete.className = "btn-card btn-card-delete";
+        btnDelete.dataset.action = "delete";
         btnDelete.textContent = "Supprimer";
-        btnDelete.addEventListener("click", async () => {
-          await db.delete("annonces", ad.id);
-          renderAnnonces();
-        });
         actions.append(btnDelete);
       }
 
-      meta.append(loc, actions);
-      details.append(top, title, desc, meta);
+      details.append(top, title, desc, meta, actions);
       article.append(thumb, details);
       li.append(article);
 
@@ -190,19 +223,83 @@ async function renderAnnonces() {
   );
 }
 
-// Filtres
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    currentFilter = tab.dataset.filter || "all";
+// ---------------------------------------------------------------------------
+// 5. Délégation d'événements sur la liste des annonces (100% Fiable)
+// ---------------------------------------------------------------------------
+const annoncesList = document.querySelector("#annonces-list");
+
+annoncesList?.addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+
+  const card = btn.closest(".ad-card");
+  if (!card) return;
+
+  const action = btn.dataset.action;
+  const id = Number(card.dataset.id) || card.dataset.id;
+  const title = card.dataset.title || card.querySelector(".ad-title")?.textContent.trim();
+  const campus = card.dataset.campus || card.querySelector(".ad-location")?.textContent.replace("📍", "").trim();
+  const contact = card.dataset.contact || "contact@univ-corse.fr";
+  const desc = card.dataset.desc || card.querySelector(".ad-desc")?.textContent.trim();
+  const type = card.dataset.type || "don";
+
+  if (action === "contact") {
+    openContactModal({ title, campus, contact });
+  } else if (action === "share") {
+    await shareAd({ id, title, type, campus, description: desc });
+  } else if (action === "delete") {
+    const db = await dbPromise;
+    await db.delete("annonces", id);
+    showToast("Annonce supprimée");
     renderAnnonces();
-  });
+  }
 });
 
 // ---------------------------------------------------------------------------
-// 5. Capacité : Web Share API (avec repli Presse-papiers)
+// 6. Modal de Contact & Partage
 // ---------------------------------------------------------------------------
+const modalContact = document.querySelector("#modal-contact");
+const contactTitle = document.querySelector("#contact-ad-title");
+const contactCampus = document.querySelector("#contact-ad-campus");
+const contactInput = document.querySelector("#contact-input-val");
+const btnEmailLink = document.querySelector("#btn-email-link");
+const btnCopyContact = document.querySelector("#btn-copy-contact");
+const btnCloseContact = document.querySelector("#btn-close-contact");
+
+function openContactModal({ title, campus, contact }) {
+  if (!modalContact) return;
+  if (contactTitle) contactTitle.textContent = title;
+  if (contactCampus) contactCampus.textContent = campus;
+  if (contactInput) contactInput.value = contact;
+  if (btnEmailLink) {
+    if (contact.includes("@")) {
+      btnEmailLink.href = `mailto:${contact}?subject=${encodeURIComponent("Intéressé par votre annonce Troc'Campus : " + title)}`;
+      btnEmailLink.style.display = "block";
+    } else {
+      btnEmailLink.href = `tel:${contact}`;
+      btnEmailLink.style.display = "block";
+    }
+  }
+  modalContact.showModal();
+}
+
+btnCopyContact?.addEventListener("click", async () => {
+  const val = contactInput.value;
+  const ok = await copyToClipboard(val);
+  if (ok) {
+    showToast("✅ Coordonnées copiées dans le presse-papiers !");
+  } else {
+    showToast("Sélectionnez le texte pour copier");
+  }
+});
+
+btnCloseContact?.addEventListener("click", () => modalContact.close());
+
+modalContact?.addEventListener("click", (e) => {
+  if (e.target === modalContact) modalContact.close();
+});
+
+// Capacité : Web Share API
 async function shareAd(ad) {
   const shareData = {
     title: `Troc'Campus : ${ad.title}`,
@@ -213,24 +310,37 @@ async function shareAd(ad) {
   if (navigator.share) {
     try {
       await navigator.share(shareData);
-      showToast("Annonce partagée");
+      showToast("✅ Annonce partagée !");
+      return;
     } catch (err) {
-      if (err.name !== "AbortError") {
-        console.error("Erreur share", err);
-      }
+      if (err.name === "AbortError") return;
     }
+  }
+
+  // Repli automatique sur le presse-papiers
+  const textToCopy = `${shareData.text} — ${shareData.url}`;
+  const ok = await copyToClipboard(textToCopy);
+  if (ok) {
+    showToast("📋 Lien copié dans le presse-papiers !");
   } else {
-    try {
-      await navigator.clipboard.writeText(`${shareData.text} — ${shareData.url}`);
-      showToast("Lien copié dans le presse-papiers");
-    } catch (err) {
-      showToast("Impossible de copier le lien");
-    }
+    showToast("Lien : " + shareData.url);
   }
 }
 
 // ---------------------------------------------------------------------------
-// 6. Modal de création d'annonce & Gestion Caméra
+// 7. Filtres par catégorie
+// ---------------------------------------------------------------------------
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    currentFilter = tab.dataset.filter || "all";
+    renderAnnonces();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. Modal de Dépose d'Annonce & Gestion Caméra
 // ---------------------------------------------------------------------------
 const modalForm = document.querySelector("#modal-form");
 const btnOpenForm = document.querySelector("#btn-open-form");
@@ -244,13 +354,17 @@ btnOpenForm?.addEventListener("click", () => {
   modalForm.showModal();
 });
 
-function closeModal() {
+function closeFormModal() {
   stopCamera();
   modalForm.close();
 }
 
-btnCloseForm?.addEventListener("click", closeModal);
-btnCancelForm?.addEventListener("click", closeModal);
+btnCloseForm?.addEventListener("click", closeFormModal);
+btnCancelForm?.addEventListener("click", closeFormModal);
+
+modalForm?.addEventListener("click", (e) => {
+  if (e.target === modalForm) closeFormModal();
+});
 
 typeSelect?.addEventListener("change", () => {
   if (fieldPrice) {
@@ -278,7 +392,7 @@ btnCamera?.addEventListener("click", async () => {
   cameraError.hidden = true;
 
   if (!navigator.mediaDevices?.getUserMedia) {
-    cameraError.textContent = "Caméra non supportée par votre navigateur. Utilisez le sélecteur de fichier.";
+    cameraError.textContent = "Caméra non supportée par votre navigateur. Vous pouvez choisir une image depuis vos fichiers.";
     cameraError.hidden = false;
     return;
   }
@@ -292,8 +406,8 @@ btnCamera?.addEventListener("click", async () => {
     videoWrapper.hidden = false;
   } catch (err) {
     log(`Refus caméra : ${err.name}`, "camera");
-    cameraError.textContent = (err.name === "NotAllowedError")
-      ? "Permission caméra refusée. Autorisez l'accès dans les réglages ou sélectionnez un fichier."
+    cameraError.textContent = (err.name === "NotAllowedError" || err.name === "PermissionDeniedError")
+      ? "Permission caméra refusée. Vous pouvez autoriser la caméra dans les réglages du navigateur ou choisir un fichier ci-dessous."
       : "Impossible d'accéder à la caméra.";
     cameraError.hidden = false;
   }
@@ -312,7 +426,7 @@ btnCapture?.addEventListener("click", () => {
 
   stopCamera();
   showPhotoPreview(currentPhotoDataUrl);
-  showToast("Photo enregistrée");
+  showToast("📸 Photo enregistrée !");
 });
 
 function stopCamera() {
@@ -332,6 +446,7 @@ photoFileInput?.addEventListener("change", (e) => {
   reader.onload = (evt) => {
     currentPhotoDataUrl = evt.target.result;
     showPhotoPreview(currentPhotoDataUrl);
+    showToast("📁 Image sélectionnée");
   };
   reader.readAsDataURL(file);
 });
@@ -348,7 +463,7 @@ btnPhotoRemove?.addEventListener("click", () => {
   if (photoFileInput) photoFileInput.value = "";
 });
 
-// Soumission formulaire
+// Soumission du formulaire
 formAnnonce?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -386,15 +501,15 @@ formAnnonce?.addEventListener("submit", async (e) => {
   if (photoFileInput) photoFileInput.value = "";
   if (fieldPrice) fieldPrice.hidden = true;
 
-  closeModal();
+  closeFormModal();
   await renderAnnonces();
   await updateSyncBadge();
   await triggerSync();
-  showToast("Annonce publiée !");
+  showToast("🎉 Annonce publiée avec succès !");
 });
 
 // ---------------------------------------------------------------------------
-// 7. Synchronisation & Outbox
+// 9. Synchronisation Outbox (Background Sync + repli en ligne)
 // ---------------------------------------------------------------------------
 async function triggerSync() {
   if ("serviceWorker" in navigator && "SyncManager" in window) {
@@ -458,7 +573,7 @@ async function updateSyncBadge() {
 }
 
 // ---------------------------------------------------------------------------
-// 8. Écoute réseau
+// 10. État Réseau
 // ---------------------------------------------------------------------------
 const netIndicator = document.querySelector("#network-status");
 const netText = document.querySelector("#network-text");
@@ -475,7 +590,7 @@ function updateNetwork() {
   if (isOnline) {
     flushOutbox();
   } else {
-    showToast("Mode hors ligne actif");
+    showToast("Mode hors ligne actif (données en cache)");
   }
 }
 
@@ -483,7 +598,7 @@ window.addEventListener("online", updateNetwork);
 window.addEventListener("offline", updateNetwork);
 
 // ---------------------------------------------------------------------------
-// 9. Réception Share Target
+// 11. Réception Web Share Target
 // ---------------------------------------------------------------------------
 async function checkSharedDrafts() {
   const params = new URLSearchParams(window.location.search);
@@ -502,13 +617,13 @@ async function checkSharedDrafts() {
       }
       await db.delete("shared_drafts", draft.id);
       modalForm.showModal();
-      showToast("Objet partagé importé");
+      showToast("📥 Objet partagé importé dans le formulaire !");
     }
   }
 }
 
 // ---------------------------------------------------------------------------
-// 10. Service Worker & Bannière de mise à jour
+// 12. Service Worker & Bannière de mise à jour
 // ---------------------------------------------------------------------------
 let waitingWorker = null;
 
@@ -544,7 +659,7 @@ document.querySelector("#btn-update-apply")?.addEventListener("click", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 11. Bouton d'installation custom (beforeinstallprompt)
+// 13. Bouton d'installation custom (beforeinstallprompt)
 // ---------------------------------------------------------------------------
 let deferredPrompt = null;
 const btnInstall = document.querySelector("#btn-install");
@@ -565,11 +680,16 @@ btnInstall?.addEventListener("click", async () => {
 
 window.addEventListener("appinstalled", () => {
   if (btnInstall) btnInstall.hidden = true;
-  showToast("Application installée");
+  showToast("🎉 Application installée sur l'appareil !");
 });
 
-// Démarrage
-window.addEventListener("DOMContentLoaded", () => {
+// Initialisation garantie sans problème de timing DOMContentLoaded
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    initHydration();
+    updateNetwork();
+  });
+} else {
   initHydration();
   updateNetwork();
-});
+}
