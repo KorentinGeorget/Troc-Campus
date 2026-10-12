@@ -389,6 +389,7 @@ const btnCameraCancel = document.querySelector("#btn-camera-cancel");
 const cameraVideo = document.querySelector("#camera-video");
 const cameraCanvas = document.querySelector("#camera-canvas");
 const cameraError = document.querySelector("#camera-error");
+const photoPlaceholderBox = document.querySelector("#photo-placeholder-box");
 const photoPreviewBox = document.querySelector("#photo-preview-box");
 const photoPreviewImg = document.querySelector("#photo-preview-img");
 const btnPhotoRemove = document.querySelector("#btn-photo-remove");
@@ -475,12 +476,22 @@ function showPhotoPreview(url) {
   if (!photoPreviewBox || !photoPreviewImg) return;
   photoPreviewImg.src = url;
   photoPreviewBox.hidden = false;
+  if (photoPlaceholderBox) photoPlaceholderBox.hidden = true;
 }
 
-btnPhotoRemove?.addEventListener("click", () => {
+function resetPhotoState() {
   currentPhotoDataUrl = null;
+  if (photoPreviewImg) photoPreviewImg.src = "";
   if (photoPreviewBox) photoPreviewBox.hidden = true;
+  if (photoPlaceholderBox) photoPlaceholderBox.hidden = false;
   if (photoFileInput) photoFileInput.value = "";
+}
+
+btnPhotoRemove?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  resetPhotoState();
+  showToast("Photo retirée");
 });
 
 // Soumission du formulaire
@@ -517,9 +528,7 @@ formAnnonce?.addEventListener("submit", async (e) => {
   });
 
   formAnnonce.reset();
-  currentPhotoDataUrl = null;
-  if (photoPreviewBox) photoPreviewBox.hidden = true;
-  if (photoFileInput) photoFileInput.value = "";
+  resetPhotoState();
   if (fieldPrice) fieldPrice.hidden = true;
 
   closeFormModal();

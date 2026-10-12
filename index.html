@@ -280,12 +280,18 @@
               <input type="file" id="photo-file" accept="image/*" hidden>
             </div>
 
+            <!-- Placeholder visuel quand aucune photo n'est choisie -->
+            <div id="photo-placeholder-box" class="photo-placeholder-card">
+              <span class="placeholder-icon" aria-hidden="true">🖼️</span>
+              <span>Aucune photo sélectionnée</span>
+            </div>
+
             <!-- Aperçu de la photo capturée/choisie -->
             <div id="photo-preview-box" class="photo-preview-card" hidden>
               <img id="photo-preview-img" alt="Aperçu photo">
               <div class="photo-preview-info">
-                <span>Photo sélectionnée</span>
-                <button type="button" id="btn-photo-remove" class="btn-text-danger">Supprimer la photo</button>
+                <span>Photo prête</span>
+                <button type="button" id="btn-photo-remove" class="btn-text-danger">🗑️ Supprimer la photo</button>
               </div>
             </div>
           </div>
