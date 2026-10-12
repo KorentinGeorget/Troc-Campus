@@ -6,6 +6,9 @@
 // 1. Fonctions utilitaires : Toasts, Copie Presse-papiers et Logs
 // ---------------------------------------------------------------------------
 function showToast(message) {
+  if ("vibrate" in navigator) {
+    try { navigator.vibrate(25); } catch (_) {}
+  }
   const container = document.querySelector("#toast-container");
   if (!container) return;
   const toast = document.createElement("div");
@@ -597,6 +600,14 @@ async function updateSyncBadge() {
   } else {
     pill.textContent = `En attente (${remaining})`;
     pill.hidden = false;
+  }
+
+  // Capacité Badge de l'icône (App Badge API)
+  if ("setAppBadge" in navigator) {
+    try {
+      if (remaining > 0) navigator.setAppBadge(remaining);
+      else navigator.clearAppBadge();
+    } catch (_) {}
   }
 }
 
