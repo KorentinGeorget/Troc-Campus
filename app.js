@@ -541,61 +541,82 @@ formAnnonce?.addEventListener("submit", async (e) => {
 // ---------------------------------------------------------------------------
 // 9. Synchronisation Outbox avec gestion If-Match (Bonus Conflits § 11)
 // ---------------------------------------------------------------------------
+let isFlushingOutbox = false;
+
 async function triggerSync() {
   if ("serviceWorker" in navigator && "SyncManager" in window) {
     try {
       const reg = await navigator.serviceWorker.ready;
       await reg.sync.register("sync-outbox");
-      return;
     } catch (err) {
       log(`Échec sync.register (${err.message})`, "sync");
     }
   }
 
+  // Tenter également l'envoi direct si la page est connectée
   if (navigator.onLine) {
     await flushOutbox();
   }
 }
 
 async function flushOutbox() {
-  const db = await dbPromise;
-  const items = await db.getAll("outbox");
-  if (items.length === 0) return;
+  if (isFlushingOutbox) return;
+  isFlushingOutbox = true;
 
-  const syncPill = document.querySelector("#sync-status");
-  if (syncPill) {
-    syncPill.textContent = `Envoi (${items.length})...`;
-    syncPill.hidden = false;
-  }
+  try {
+    const db = await dbPromise;
+    const items = await db.getAll("outbox");
+    if (items.length === 0) {
+      await updateSyncBadge();
+      return;
+    }
 
-  for (const item of items) {
-    try {
-      // Démonstration If-Match (Cheatsheet § 11)
-      const version = item.payload.version || 1;
-      const res = await fetch("https://httpbin.org/post", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "If-Match": `"${version}"`
-        },
-        body: JSON.stringify(item.payload)
-      });
+    const syncPill = document.querySelector("#sync-status");
+    if (syncPill) {
+      syncPill.textContent = `Envoi (${items.length})...`;
+      syncPill.hidden = false;
+    }
 
-      if (res.status === 412) {
-        // Conflit détecté (Precondition Failed) : déclencher la bannière de réconciliation
-        handleSyncConflict(item);
-        break;
-      } else if (res.ok) {
-        await db.delete("outbox", item.id);
-      } else {
+    for (const item of items) {
+      try {
+        const version = item.payload?.version || 1;
+        // Créer un payload léger pour la synchronisation réseau (on ne transmet pas des Mo de Base64 à httpbin)
+        const networkPayload = { ...item.payload };
+        if (networkPayload.photo && networkPayload.photo.length > 500) {
+          networkPayload.photo = `[photo_data_attached: ${networkPayload.photo.length} bytes]`;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const res = await fetch("https://httpbin.org/post", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "If-Match": `"${version}"`
+          },
+          body: JSON.stringify(networkPayload),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (res.status === 412) {
+          handleSyncConflict(item);
+          break;
+        } else if (res.ok) {
+          await db.delete("outbox", item.id);
+        } else {
+          break;
+        }
+      } catch (err) {
+        console.warn("Échec requête outbox :", err);
         break;
       }
-    } catch {
-      break;
     }
+  } finally {
+    isFlushingOutbox = false;
+    await updateSyncBadge();
   }
-
-  await updateSyncBadge();
 }
 
 async function updateSyncBadge() {
@@ -795,23 +816,31 @@ async function checkSharedDrafts() {
 // ---------------------------------------------------------------------------
 let waitingWorker = null;
 
+function showUpdateBanner(worker) {
+  waitingWorker = worker;
+  const banner = document.querySelector("#update-banner");
+  if (banner) {
+    banner.hidden = false;
+  }
+}
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").then((reg) => {
-    // Si un worker a été téléchargé et attend déjà l'activation
-    if (reg.waiting && navigator.serviceWorker.controller) {
-      waitingWorker = reg.waiting;
-      const banner = document.querySelector("#update-banner");
-      if (banner) banner.hidden = false;
+    // 1. Forcer la vérification immédiate auprès du serveur
+    reg.update().catch(() => {});
+
+    // 2. Si un worker est déjà en attente
+    if (reg.waiting) {
+      showUpdateBanner(reg.waiting);
     }
 
+    // 3. Écouter l'arrivée d'une nouvelle version
     reg.addEventListener("updatefound", () => {
       const newWorker = reg.installing;
       if (!newWorker) return;
       newWorker.addEventListener("statechange", () => {
         if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-          waitingWorker = newWorker;
-          const banner = document.querySelector("#update-banner");
-          if (banner) banner.hidden = false;
+          showUpdateBanner(newWorker);
         }
       });
     });
@@ -826,11 +855,26 @@ if ("serviceWorker" in navigator) {
       updateSyncBadge();
     }
   });
+
+  // Re-vérifier les mises à jour dès que l'utilisateur revient sur l'application
+  window.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      navigator.serviceWorker.ready.then((reg) => reg.update()).catch(() => {});
+    }
+  });
 }
 
 document.querySelector("#btn-update-apply")?.addEventListener("click", () => {
   if (waitingWorker) {
     waitingWorker.postMessage({ type: "SKIP_WAITING" });
+  } else if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (reg?.waiting) {
+        reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      } else {
+        window.location.reload();
+      }
+    });
   }
 });
 

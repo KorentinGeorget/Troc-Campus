@@ -1,7 +1,11 @@
 // sw.js — Service Worker de Troc'Campus
-// Versioning du cache, App Shell, gestion hors ligne, Background Sync et Share Target
+try {
+  importScripts("https://cdn.jsdelivr.net/npm/idb@8/build/umd.js");
+} catch (e) {
+  console.warn("Échec chargement initial idb dans SW :", e);
+}
 
-const CACHE_NAME = "troc-campus-v6";
+const CACHE_NAME = "troc-campus-v7";
 
 const APP_SHELL = [
   "/",
@@ -89,7 +93,6 @@ async function handleShareTarget(request) {
 
     // Sauvegarder dans un store de transfert temporaire IndexedDB
     try {
-      importScripts("https://cdn.jsdelivr.net/npm/idb@8/build/umd.js");
       const db = await self.idb.openDB("troc-campus-db", 1);
       await db.add("shared_drafts", {
         title: title || text || "Objet partagé",
@@ -189,7 +192,6 @@ self.addEventListener("sync", (event) => {
 
 async function flushOutboxSW() {
   try {
-    importScripts("https://cdn.jsdelivr.net/npm/idb@8/build/umd.js");
     const db = await self.idb.openDB("troc-campus-db", 1);
     const items = await db.getAll("outbox");
 
@@ -202,11 +204,21 @@ async function flushOutboxSW() {
 
     for (const item of items) {
       try {
+        const networkPayload = { ...item.payload };
+        if (networkPayload.photo && networkPayload.photo.length > 500) {
+          networkPayload.photo = `[photo_data_attached: ${networkPayload.photo.length} bytes]`;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
         const res = await fetch("https://httpbin.org/post", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(item.payload)
+          body: JSON.stringify(networkPayload),
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (res.ok) {
           await db.delete("outbox", item.id);
@@ -216,8 +228,8 @@ async function flushOutboxSW() {
           break;
         }
       } catch (err) {
-        log(`sync-outbox : coupure réseau détectée (${err.message})`);
-        break; // Arrêter et laisser le navigateur replanifier le sync
+        log(`sync-outbox : erreur réseau (${err.message})`);
+        break;
       }
     }
 
