@@ -5,7 +5,7 @@ try {
   console.warn("Échec chargement initial idb dans SW :", e);
 }
 
-const CACHE_NAME = "troc-campus-v13";
+const CACHE_NAME = "troc-campus-v14";
 
 const APP_SHELL = [
   "/",
