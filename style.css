@@ -133,6 +133,66 @@ body {
   cursor: pointer;
 }
 
+/* Bandeau App Link Android Natif */
+.native-app-banner {
+  background: linear-gradient(90deg, #064e3b, #047857);
+  color: #ffffff;
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 8px rgba(6, 78, 59, 0.25);
+  position: sticky;
+  top: 0;
+  z-index: 55;
+}
+
+.native-app-banner-inner {
+  max-width: 1040px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.native-app-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.native-app-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-native {
+  background: #ffffff;
+  color: #064e3b;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-native:hover {
+  background: #f0fdf4;
+  transform: translateY(-1px);
+}
+
+.btn-ghost-native {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 /* --------------------------------------------------------------------------
    En-tête de navigation Mobile & Desktop
    -------------------------------------------------------------------------- */

@@ -1140,13 +1140,38 @@ window.addEventListener("appinstalled", () => {
   showToast("🎉 Application installée sur l'appareil !");
 });
 
+// ---------------------------------------------------------------------------
+// 16. Bandeau App Link Android Natif (Passerelle PWA -> Native)
+// ---------------------------------------------------------------------------
+function setupNativeAppBanner() {
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const isDismissed = sessionStorage.getItem("native_app_banner_dismissed");
+  const banner = document.querySelector("#native-app-banner");
+  const openBtn = document.querySelector("#btn-open-native-app");
+  const dismissBtn = document.querySelector("#btn-native-dismiss");
+
+  if (!banner || !openBtn || !isAndroid || isDismissed) return;
+
+  const search = window.location.search || "";
+  const intentUrl = `intent://troc-campus.korentingeorget.com/${search}#Intent;scheme=https;package=com.korentingeorget.troccampus;end`;
+  openBtn.href = intentUrl;
+  banner.hidden = false;
+
+  dismissBtn?.addEventListener("click", () => {
+    banner.hidden = true;
+    sessionStorage.setItem("native_app_banner_dismissed", "1");
+  });
+}
+
 // Initialisation
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     initHydration();
     updateNetwork(true);
+    setupNativeAppBanner();
   });
 } else {
   initHydration();
   updateNetwork(true);
+  setupNativeAppBanner();
 }
