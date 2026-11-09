@@ -10,6 +10,10 @@
         respond `{"status":"ok","synced":true}` 200
     }
 
+    # Digital Asset Links pour App Link Android
+    @assetlinks path /.well-known/assetlinks.json
+    header @assetlinks Content-Type "application/json"
+
     # Négociation de contenu Markdown (Démo chapitre 8 : Accept: text/markdown)
     @markdown_accept {
         header Accept *text/markdown*

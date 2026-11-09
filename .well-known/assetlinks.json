@@ -1,0 +1,22 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.korentingeorget.troccampus",
+      "sha256_cert_fingerprints": [
+        "07:B4:8C:EF:9D:A3:75:AC:A1:78:3E:08:A6:0D:9F:1F:12:AC:F8:C8:50:9F:BC:C0:6E:5B:AD:1D:69:3E:00:CD"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "corsica.universita.carnet",
+      "sha256_cert_fingerprints": [
+        "07:B4:8C:EF:9D:A3:75:AC:A1:78:3E:08:A6:0D:9F:1F:12:AC:F8:C8:50:9F:BC:C0:6E:5B:AD:1D:69:3E:00:CD"
+      ]
+    }
+  }
+]
